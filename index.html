@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <!-- 🆕 v3.0.0 — MIGRAZIONE FIREBASE: progetto lecoin-1f8a5 (account sospeso) sostituito con lecoin-f782a (account dedicato). Config aggiornata. I DATI vanno importati dal backup JSON. ATTENZIONE: il PROTECTED_ADMIN_UID va aggiornato col nuovo UID admin dopo la creazione dell account. ░░ v2.9.14 — INSTAPAY LINK IPN: nuovo campo «رابط InstaPay (ipn.eg)» nella config Instapay (instapayCfg.link, salvato in settings/instapay). Il QR di ricezione contiene un link firmato https://ipn.eg/C/Q/.../...?ISIGN=... (firma non generabile lato client → va incollato dall ufficiale). Il bottone «افتح Instapay» ora apre quel link: se ipn.eg è registrato come app-link apre InstaPay sul DESTINATARIO precompilato (importo da digitare, QR statico). Fallback intent/scheme se il link non è impostato. ░░ v2.9.13 — FIX INSTAPAY: il bottone «افتح Instapay» apriva sempre il Play Store anche con app installata. Causa: usava window.location.href=instapay:// (scheme non gestito) + setTimeout→store, quindi partiva sempre il fallback. FIX: su Android ora usa intent URL col PACKAGE (intent://#Intent;package=com.egyptianbanks.instapay;S.browser_fallback_url=STORE;end) che apre l app installata e va allo store SOLO se assente (come fa wa.me per WhatsApp). iOS/desktop mantiene scheme+fallback. ░░ v2.9.12 — SCANNER: CAUSA REALE TROVATA E CORRETTA. HTML malformato nell-intestazione dello scanner (riga ~8716): DUE </div> di troppo chiudevano il contenitore .sheet subito dopo l-header → il riquadro fotocamera #bc-reader (e il campo manuale) finivano FUORI dalla card, dietro lo sfondo sfocato dell-overlay. La fotocamera partiva davvero ma il video era renderizzato fuori vista → card con solo intestazione, nessun video. Non erano permessi/libreria/dimensioni/decoder. FIX: rimossi i due </div> errati, il pulsante × torna dentro l-header. QC strutturale (DOM, senza camera): #bc-reader + bc-msg + campo manuale ora DENTRO .sheet. ░░ v2.9.11 — SCANNER (causa trovata, indizio Dottore: rotto da quando esiste il tool video di benvenuto): su Android i decoder video hardware sono limitati; un elemento <video> non rilasciato (welcome-vid del popup, wvt-prev anteprima del tool, probe di analisi) occupa il decoder → quando lo scanner accende la camera (anch-essa un video) il riquadro resta vuoto pur con camera attiva. FIX: openScanner ora libera (pause+src vuoto+load) ogni altro <video> della pagina prima di avviare la camera, liberando il decoder. ░░ v2.9.10 — FIX: lo strumento pulizia orfani ora ha la DOPPIA conferma testuale Reset→AZZERA (case-sensitive, passo 2 sbloccato solo dopo passo 1) come tutte le operazioni distruttive, oltre a backup auto + delay 3s + confirm nativo + admin-only. Prima aveva solo confirm nativi. ░░ v2.9.9 — (A) STRUMENTO PULIZIA ORFANI: nuovo bottone «حذف المنتجات بدون فئة» nella Danger Zone (accanto a filiali fantasma): cleanOrphanProducts trova i prodotti con categoryId verso categoria inesistente e li cancella col loro magazzino. Distruttivo → backup auto + doppia conferma + admin-only + reload. (B) DIPENDENZE RESTORE GENERALIZZATE: RESTORE_DEPS + expandDeps nel ripristino a sezioni — products→categories, inventory→products+categories, offers→products+categories, loads→products+suppliers, sales/pointsLedger/orders/clientOrders→customers. Selezionando una collection si includono auto le dipendenze presenti nel backup (con avviso) + garanzia finale in execBtn. ░░ v2.9.8 — DEEP-QC RIPRISTINO (bug prodotti orfani): il ripristino a sezioni (executeSelectiveRestore) reintroduceva i prodotti scelti senza protezione di coerenza → ripristinando «المنتجات» senza «الفئات» i prodotti tornavano orfani (categoryId verso categoria inesistente → sbiaditi). Il full restore invece e coerente (wipe+ricarica tutto). FIX (come v2.8.5 per i punti): in openSelectiveRestore selezionando products si includono automaticamente le categories (se nel backup), con avviso; garanzia finale anche in execBtn. PENDING: strumento pulizia orfani esistenti (distruttivo, da confermare). ░░ v2.9.7 — FIX SCANNER (causa vera, da indizio Dottore: funzionava poi si rompeva tra uno scan e l-altro): la fotocamera non veniva rilasciata alla chiusura → istanza Html5Qrcode zombie teneva la camera occupata → ogni apertura successiva accendeva la camera ma non agganciava il video. Ricostruito il ciclo di vita: stopScanner ora async e ATTENDIBILE (getState→stop→clear); openScanner fa await stopScanner() PRIMA di creare la nuova istanza; se la camera è ancora occupata attende 600ms e riprova con device id esplicito (ultima camera ≈ posteriore). ░░ v2.9.6 — FIX SCANNER (causa reale): camera partiva (permesso OK, messaggio successo, pallino attivo) ma il VIDEO non era visibile → niente da decodificare. html5-qrcode dopo start collassava l-altezza del riquadro; il min-height inline non reggeva. Fix CSS !important: riquadro bc-reader 58vh (min 300px), video width+height 100% object-fit cover, canvas nascosto. Cosi il riquadro ha dimensioni reali e il decoder ha un fotogramma. ░░ v2.9.5 — SCANNER DEEP-QC: diagnostica parlante + fallback CDN. (1) ensureScannerLib carica html5-qrcode con fallback su 3 CDN (jsdelivr/unpkg/cdnjs) se uno è bloccato/lento; script tag riga 436 ha onerror→jsdelivr. (2) openScanner ora async con messaggi specifici nel bc-msg per OGNI causa: contesto non sicuro (HTTPS), libreria non caricata, permesso negato (NotAllowedError), nessuna camera (NotFoundError), camera occupata (NotReadableError), o errore generico con [nome]. Così si vede ESATTAMENTE dove si blocca invece di un camNoAccess generico. Camera non testabile in QC headless. ░░ v2.9.4 — FIX SCANNER: lo scanner barcode si apriva (camera attiva) ma non decodificava MAI nulla, su qualsiasi dispositivo/schermata. Causa: qrbox forzato a Math.max(280, 95% del lato minore) poteva superare le dimensioni reali del video → html5-qrcode blocca la decodifica. Fix: rimosso il qrbox → scansiona l-intero fotogramma (robusto per barcode prodotti 1D e QR clienti). NB: la camera non è testabile nell-ambiente QC headless — verificare dal vivo. ░░ v2.9.3 — FIX: anche gli ordini Instapay PREPAGATI passano per la coda/preparazione (prima saltavano a paid dal popup). Ora: popup → pending (per TUTTI); pesca → preparing (scala stock 1 volta); جاهز → ready; alla consegna payClientOrder mostra per i prepagati "مدفوع مسبقاً" + bottone "تأكيد الاستلام" che chiama finalizeOrderPayment (registra vendita+punti, NESSUN re-incasso). Stock scalato una sola volta (alla presa). Risolve: accettando l-ordine lo stato andava a pronto/pagato invece che in preparazione. ░░ v2.9.2 — FASE 2 VISTA CLIENTE (posizione in coda live): nella card ordine, banner di stato dinamico premium: pending+queueAhead>0 → "N طلبات قبل دورك" (numero in cerchio amber); queueAhead=0 → "أنت التالي!" (gold); preparing → "جاري تحضير طلبك الآن" (forest+chef); ready → "طلبك جاهز للاستلام" (gold). queueAhead viene scritto dal cassiere (loadPendingPoolForCassa) in ogni pending = numero di ordini in attesa DAVANTI (FIFO), letto dal cliente solo dal proprio ordine (rispetta le regole, niente accesso ad ordini altrui). Auto-refresh 20s. NB: oggi gli ordini Instapay prepagati saltano la pila; quelli cash/coperti-da-punti la attraversano. ░░ v2.9.1 — DETTAGLIO ORDINE TAP: nel Pool del cassiere, toccando la card di un ordine (area avatar+nome, con chevron) si apre uno sheet showOrderDetail con la LISTA DEGLI ARTICOLI da preparare (qty × nome + subtotale) + stato + totale + telefono. Risolve: il cassiere deve sapere COSA contiene l-ordine, non solo quanti pezzi. Il bottone azione (ابدأ التحضير/جاهز) resta separato dal tap-dettaglio. ░░ v2.9.0 — MOTORE DEL TURNO ORDINI (Fase 1, lato cassiere): attivato lo stato "preparing" (prima morto). Nuovo ciclo: pending(pila FIFO) → preparing(presa) → ready → paid. Nuova bacheca POOL nel cassiere (loadPendingPoolForCassa): zona "قيد التحضير" (bottone جاهز→ready) + zona "في الطابور" (badge numero FIFO, bottone ابدأ التحضير→preparing). La presa (pending→preparing) ora controlla e SCALA lo stock (prima avveniva a ready) + lock multi-cassiere (preparingBy; se già preso da altro cassiere avvisa). Il popup nuovo ordine (showIncomingOrder) NON salta più a ready: ora salva eventuali modifiche e lascia l-ordine in coda (pending). Eccezione invariata: ordini già pagati online (paidByClient) → finalizzati subito come prima. Fase 2 (vista cliente: posizione in coda live) come prossimo step. ░░ v2.8.7 — AGGREGATO CLASSIFICA (prerequisito sicurezza Firebase): la Sfida del Mese NON legge più tutte le fatture (sales) — ora legge un doc aggregato leggero leaderboard/{YYYY-MM} con solo {conteggio visite + primo nome} per cliente. Aggiornato a ogni vendita (cassa + ritiro ordine) via bumpMonthlyLeaderboard con increment() atomico. Così i clienti vedono la classifica SENZA accedere a importi/prodotti/prove-di-pagamento delle fatture altrui → le regole Firestore possono proteggere completamente sales/pointsLedger. Più sicuro E più efficiente (1 lettura invece di scansionare tutte le fatture). ░░ v2.8.6 — SFIDA DEL MESE (gamification): classifica LIVE nella sezione Punti, top 3 per NUMERO DI VISITE/ACQUISTI del mese corrente (conta le fatture sales del mese per customerId). Podio oro/argento/bronzo con primo nome (privacy) + numero visite; evidenzia la riga del cliente; se fuori dal podio mostra "mركزك X · باقي Z للمركز الثالث"; se senza visite invita alla prima. Countdown a fine mese. Nota "الجوائز تُعلن في البكاريا" che collega alla lavagna. Caricata con IIFE indipendente + cache sessione 120s (window._monthlyRank). Stile forest/gold premium coerente con la sezione punti. ░░ v2.8.5 — FIX COERENZA PUNTI↔FATTURE (bug punti orfani): i punti dei clienti DERIVANO dalle fatture, ma il reset center li gestiva come voci SEPARATE — cancellando solo "sales" i punti (customers.points) e il pointsLedger restavano → saldi orfani basati su fatture inesistenti (caso vissuto dal Dottore). FIX 1 (reset center): selezionare sales/pointsLedger/customers forza automaticamente "customerPoints" (azzera saldi + svuota ledger), con checkbox riflesso nella UI + avviso nel confirm. FIX 2 (field reset): f-cust-points (azzera saldo) ora svuota anche il pointsLedger, altrimenti il saldo=0 restava incoerente col ledger e col livello fedeltà (calcolato dal lifetime earned). Verificati anche: depot reset (solo inventory, nessun punto), storno/reso singolo (già revoca punti via void_revoke — corretto). PER RIPARARE LO STATO ATTUALE: aprire il reset center e selezionare "customerPoints". ░░ v2.8.4 — RIORDINA 1-TAP (Stadio 3/C): card "اطلب من جديد" in cima allo Shop (sotto il banner filiale) che mostra l&apos;ultimo ordine del cliente (nomi articoli + n. pezzi) con bottone "اطلبها مرة أخرى". Caricata in modo INDIPENDENTE dal rendering prodotti (IIFE async, non interferisce). Gli articoli sono RIMAPPATI ai prodotti CORRENTI (prezzo/nome aggiornati; salta i prodotti non più attivi o non visibili al cliente). Tap → merge nel clientCart (non perde un carrello già avviato) + apre il carrello (openClientCart). Solo cliente loggato con un ordine precedente; altrimenti card nascosta. ░░ v2.8.3 — LIVELLI FEDELTÀ (Stadio 2/B): badge Bronze/Silver/Gold in stile gesso sotto il nome, con icona trophy colorata (bronzo CD7F32 / argento BFC6CC / oro C9A84C) + nome livello + progresso "باقي X نقطة للمستوى Y" (o "أعلى مستوى" se Gold). Livello calcolato dai PUNTI GUADAGNATI NEL TEMPO (lifetime earned = somma earn - void_revoke dal pointsLedger), metrica corretta che non scende quando il cliente spende i punti. Soglie: Bronze 0-499, Silver 500-1999, Gold 2000+. Caricato nella stessa cache di sessione (60s) delle mini-stat. VISUALIZZAZIONE pura: non tocca la logica di assegnazione punti (i bonus % effettivi per livello sarebbero uno stadio separato da concordare). ░░ v2.8.2 — 3 MINI-STAT GESSO dentro la lavagna (sotto saluto+punti): طلباتك (totale ordini) · آخر زيارة · عضو منذ MMM YYYY. Dati ordini+vendite caricati async SOLO se cliente loggato, con cache di sessione window._cliMiniStats (60s) per non riquery a ogni re-render/refresh della lavagna. Stile gesso coerente (label gesso + valori oro). NON tocca boardH (lavagna resta fissa, fit-to-fit gestisce il contenuto). ░░ v2.8.1 — ENGAGEMENT DENTRO LA LAVAGNA (approccio corretto): saluto personalizzato in stile GESSO integrato in cima a fixedSectionHtml — saluto contestuale (mattina/pomeriggio/sera AR+EN) + nome + punti in oro + barra progresso gesso (o "puoi usarli ora" se >=50). Mostrato SOLO a cliente loggato (clientProfile.id): sul login screen la lavagna resta invariata. NON tocca boardH: la lavagna resta FISSA e riempie ogni display; il fit-to-fit esistente scala il contenuto se necessario. Nessuna competizione per lo spazio (lezione da v2.7.98/99). ░░ v2.8.0 — RIPRISTINO LAVAGNA FISSA (revert architetturale): annullati gli interventi v2.7.98/v2.7.99 (hero personalizzato + 3 mini-stat sopra la lavagna) che avevano spinto la lavagna giù costringendo a sottrarne l'altezza in modo fragile. La lavagna col bordo in legno torna al comportamento originale: altezza FISSA = viewport - header - nav - 26, riempie lo schermo su QUALSIASI dispositivo, indipendente dal contenuto interno. renderClientHome = SOLO lavagna. boardH e window._chalkResize riallineati alla stessa formula originale. Lezione: non rendere fragile un sistema che funziona per aggiungere una feature; l'engagement va integrato DENTRO la lavagna (sezione in cima) senza spostarla. ░░ v2.7.97 — COMPARE PREMIUM (massimo rendimento): (1) auto-rigenerazione al toggle del checkbox e dei chip mode (niente più "clicca genera di nuovo"); (2) nuova modalità YoY "stesso periodo l&apos;anno scorso" tramite Date.setFullYear(-1), chip selector sotto al checkbox; (3) KPI hero cards premium (top 4 metriche del totale: valore corrente grande + Δ% colorato a pillola + valore precedente piccolo); (4) colonna Δ% per riga nella tabella principale (badge ▲/▼/━ a pillola, "جديد" per prodotti assenti nel periodo precedente, vuoto per sub-rows); (5) messaggio esplicito quando il confronto non è disponibile (rapporti senza riga totale come turnover). tableHtml esteso con param htmlCols (5° opzionale, retro-compatibile). i18n: compareModePrev/Yoy/New/NotAvail. ░░ v2.7.96 — Reports Hub PREMIUM icons: sostituite TUTTE le emoji della shell con icone SVG ic() (REP_SVG mappa ogni rapporto: receipt/box/coins/flame/truck/store/creditCard/building/star/clock/users/warehouse/boxes/refresh/tag/sort/bag/heart/alert/target/gem). Card griglia, titolo risultati, header periodo (clock), bottone genera (search), busy (hourglass), data risultati (calendar) — niente più emoji nelle funzioni. ░░ v2.7.95 — REDESIGN Reports Hub (shell): ricerca INTELLIGENTE con sinonimi AR+EN (REP_KW) che filtra una GRIGLIA di card rapporti responsive (auto-fill minmax 150px → 1 col mobile, più colonne tablet/PC) e premium (icona+label, selezione evidenziata forest+check), al posto del dropdown. Tap su card = seleziona + genera. Ricerca rapporti (hubState.search) separata dal filtro righe tabella (nuovo hubState.tableSearch con barra dedicata nei risultati + re-focus). Logica generate/renderResults/export/chart invariata. ░░ v2.7.94 — NUOVI RAPPORTI PRODOTTO (stadio 1/2) nel Reports Hub: Riordino (sotto-soglia per filiale + qtà suggerita da velocità×14gg), Sell-through (venduto/(stock+venduto)), Turnover (venduto/stock medio + giorni per esaurire), Redditività (profitto + % contributo al profitto totale). Costruiti in buildReportData con soldMap/purMap/stockMap già esistenti, registrati nel return e nel registro REPORTS. Stadio 2 in arrivo: scheda movimenti, storico prezzi, confronto periodi, frequenza riordino. ░░ v2.7.93 — REGOLA NESSUNA CASSA IN NEGATIVO (scelta Dottore: blocco totale, nessuna eccezione): _confirmIfOverdraw ora BLOCCA (toast treInsufficient + return false) invece di confermare → tutte le uscite che la usano (finanziamento HQ, consolidamento filiale, uscita cassa, dotazione custodia, cassiere prendi-dal-fronte, prelievo capitale) sono bloccate sotto-zero. Aggiunto blocco mancante a PAGAMENTO FORNITORE (saldo via _currentTreasury) e RICEZIONE MERCE pagata (saldo affidabile on-demand via _cashAvailFor: branch=branchCashAvailable, hq=carica cashMovements+investments). Custodia cassiere già protetta (return/liquidation). ░░ v2.7.92 — DECIMALI SOLDI INTELLIGENTI: fmt ora mostra 0 decimali se il valore è intero, esattamente 2 decimali se ha parte frazionaria (15→15, 15.5→15.50, 15.55→15.55). Copre TUTTI i punti-soldi del sito in un colpo (prezzi, totali, tesoreria, report, punti-valore). Percentuali con fmt protette con Math.round (discountPct, pct) per restare intere. egpPerPoint (soldi) spostato da fmt2 a fmt. Quantità/punti interi invariati. ░░ v2.7.91 — Upload video benvenuto: analisi+anteprima PLUS upload su Firebase Storage (welcome/welcome.mp4) + URL salvata in Firestore settings/welcomeVideo. showWelcomeVideo ora async: legge URL da Firestore, fallback ./welcome.mp4. _wvtDoUpload: uploadBytesResumable con progress bar live + getDownloadURL + setDoc. VINCOLO DEPLOY: Firebase Storage deve essere abilitato nel progetto lecoin-1f8a5 con rules che permettono write agli admin autenticati. ░░ v2.7.90 — Strumento (admin, in Gestione) "فيديو الترحيب": upload video locale → legge metadati (dimensioni, ratio, peso, durata), verdetti a pillola colorati, anteprima in mock telefono 9:19.5 con toggle ملء/كامل (cover/contain) per vedere bande vs taglio, e specifiche target (1080×1920 9:16, ≤800KB, 5-12s, MP4 muto). Nessuna transcodifica (limite browser): solo analisi+guida in locale, niente upload. ░░ v2.7.89 — Video di benvenuto: popup a tutto schermo allapertura cliente (dopo login), video FILE SEPARATO welcome.mp4 (ottimizzato 279KB, muto per autoplay) referenziato con ./welcome.mp4 — NON incorporato per non appesantire index.html. object-fit:contain su sfondo brand. Skip in alto a sinistra che appare ~1.5s dopo lavvio. Chiusura su skip / fine video / fallback 13s. Mostrato una volta per caricamento (_welcomeShown). VINCOLO DEPLOY: caricare welcome.mp4 nella ROOT del repo lecoinheliopolis.github.io accanto a index.html. ░░ v2.7.88 — Redesign PREMIUM finestra cancellazione categoria: righe prodotto con foto in tondo 46px + nome 14px/800 + meta-chip a pillola (prezzo gold-forest, stock colorato per livello); header lista con badge conteggio a pillola; le due azioni come BLOCCHI distinti (verde "conserva e sposta" con select+bottone; zona pericolo rossa con nota+bottone), label sezione maiuscole. ░░ v2.7.87 — Fix UI: il bottone rosso «احذف الفئة والمنتجات» ora condivide la classe base btn-forest (padding 12px 18px + min-height 44/48px) col verde, sovrascrivendo solo il background → stessa altezza/larghezza. Prima usava solo btn-wide → più basso. ░░ v2.7.86 — Finestra cancellazione categoria: (1) mostra LELENCO dei prodotti collegati (foto+nome+prezzo+stock); (2) aggiunta la scelta «احذف الفئة والمنتجات» (cancella categoria + prodotti + i loro record di magazzino via query productId), con confirm distruttivo esplicito. Resta la via sicura sposta/svuota. ░░ v2.7.85 — PRODOTTI ORFANI: cancellando una categoria i prodotti non restano più orfani silenziosi. openCategoryDelete: se la categoria ha prodotti, chiede dove spostarli (altra categoria o "senza categoria") prima di cancellare. Orfani esistenti: badge ambra "بدون فئة" (≠ esaurito ≠ categoria chiusa) + filtro dedicato con conteggio in Prodotti. isCategoryVisibleToClient: categoryId orfano = senza categoria → non visibile al cliente. ░░ v2.7.84 — CASSIERE: card "La mia custodia" nella schermata cassiere (mostra i soldi in possesso, mappati allo user) + self-service: «خذ من الفرع» (prende dalla cassa filiale alla propria custodia = custody_dotation) e «رجّع للفرع» (rimette in cassa filiale = custody_return, l'inverso). Default: a fine turno i soldi restano in custodia (nessun versamento forzato). branchCashAvailable calcola la cassa filiale solo dai cashMovements. Guardie anti-scoperto. ░░ v2.7.83 — AUDIT proattivo classi-bug ricorrenti: (a) cache→vista vecchia dopo mutazione = pulito (catalogo/offerte/annunci invalidano correttamente; tesoreria già forzata); (b) doppio attributo style su bottoni disabilitati = nessuna occorrenza residua; (c) allineato _salesAll alla regola sales {id:d.id,...}. ░░ v2.7.82 — FIX numeri d'ordine categorie duplicati dopo cancellazione: order assegnato con length+1 (collisioni) + badge da valore grezzo + nessuna ricompattazione al delete. Ora gli ordini sono SEMPRE una sequenza pulita 1..N (auto-riparazione in memoria a ogni render, persistenza in background solo dei cambiati). Creazione usa max+1. ░░ PRECEDENTE v2.7.81 — NUOVA FEATURE: Dotazione cassiere (HQ/filiale ↔ custodia cassiere, somma-zero): dare/riprendere contante in custodia. Nuovi tipi movimento custody_dotation/custody_return in treasuryBalances+treasuryReport; computeCashierCustody ora include dotazioni/rientri/spese-da-custodia nell'atteso; UI openCustodyOp (toggle dare/riprendere, sorgente HQ/filiale, scelta cassiere, guardia scoperto); etichette registro + filtro. Verificato 29/29 invarianti (conservazione, coerenza report↔saldi, reversibilità, expected=custody). ░░ PRECEDENTE v2.7.80 — FIX TESORERIA: (1) cache Analytics non si invalidava dopo dotazione/consolidamento/liquidazione/spesa/investimento/debito → saldi a schermo vecchi → operazioni rifatte per errore (DOPPIO 1325→2650). Ora loadAnalyticsData(true) forza la ricarica dopo OGNI mutazione finanziaria. (2) FIX UI liquidazione: il deposito ora segue il contato per intero (prima si fermava sulla 1ª cifra). Motore tesoreria verificato sano (25/25 invarianti conservazione/coerenza). build 05-Jun-2026 -->
-  <meta name="build-version" content="3.0.8-social-login-race-fix-20260608">
+  <!-- 🆕 v3.1.0 — MULTILINGUA CLIENTE (FR + IT): aggiunte Francese e Italiano alle SOLE schermate cliente (admin/manager/cassiere restano AR/EN). Architettura: t() con fallback EN per ogni chiave non tradotta in fr/it + helper L(ar,en,fr,it) per i ternari inline + dizionari fr/it (153 chiavi client ciascuno). Selettore lingua a 4 vie in DUE punti — registrazione (openClientSignup) e impostazioni (renderClientMyData, card lingua) — entrambi persistono su localStorage E sul campo customers.lang (segue il cliente su ogni dispositivo), cambio ISTANTANEO via render. Contenuto dinamico (nomi prodotto/categoria/filiale, descrizioni) fa fallback su EN (nessun campo nuovo). Date/mesi nativi (fr-FR/it-IT). ECCEZIONE: ANNUNCI lavagna ora QUADRILINGUE — editor con campi titolo+messaggio AR/EN/FR/IT (titleFr/titleIt/messageFr/messageIt + legacy title/message), display sceglie la lingua corrente con fallback EN; pseudo-annuncio Happy Hour anch'esso FR/IT. QC: node --check OK, runtime funzionale 55/55 (risoluzione fr/it, fallback EN admin, L/pickAnn), QC strutturale editor annunci bilanciato (23 div/14 label/4 textarea). NB: customers già in BACKUP_COLLECTIONS → campo lang incluso automaticamente. ░░ v3.0.0 — MIGRAZIONE FIREBASE: progetto lecoin-1f8a5 (account sospeso) sostituito con lecoin-f782a (account dedicato). Config aggiornata. I DATI vanno importati dal backup JSON. ATTENZIONE: il PROTECTED_ADMIN_UID va aggiornato col nuovo UID admin dopo la creazione dell account. ░░ v2.9.14 — INSTAPAY LINK IPN: nuovo campo «رابط InstaPay (ipn.eg)» nella config Instapay (instapayCfg.link, salvato in settings/instapay). Il QR di ricezione contiene un link firmato https://ipn.eg/C/Q/.../...?ISIGN=... (firma non generabile lato client → va incollato dall ufficiale). Il bottone «افتح Instapay» ora apre quel link: se ipn.eg è registrato come app-link apre InstaPay sul DESTINATARIO precompilato (importo da digitare, QR statico). Fallback intent/scheme se il link non è impostato. ░░ v2.9.13 — FIX INSTAPAY: il bottone «افتح Instapay» apriva sempre il Play Store anche con app installata. Causa: usava window.location.href=instapay:// (scheme non gestito) + setTimeout→store, quindi partiva sempre il fallback. FIX: su Android ora usa intent URL col PACKAGE (intent://#Intent;package=com.egyptianbanks.instapay;S.browser_fallback_url=STORE;end) che apre l app installata e va allo store SOLO se assente (come fa wa.me per WhatsApp). iOS/desktop mantiene scheme+fallback. ░░ v2.9.12 — SCANNER: CAUSA REALE TROVATA E CORRETTA. HTML malformato nell-intestazione dello scanner (riga ~8716): DUE </div> di troppo chiudevano il contenitore .sheet subito dopo l-header → il riquadro fotocamera #bc-reader (e il campo manuale) finivano FUORI dalla card, dietro lo sfondo sfocato dell-overlay. La fotocamera partiva davvero ma il video era renderizzato fuori vista → card con solo intestazione, nessun video. Non erano permessi/libreria/dimensioni/decoder. FIX: rimossi i due </div> errati, il pulsante × torna dentro l-header. QC strutturale (DOM, senza camera): #bc-reader + bc-msg + campo manuale ora DENTRO .sheet. ░░ v2.9.11 — SCANNER (causa trovata, indizio Dottore: rotto da quando esiste il tool video di benvenuto): su Android i decoder video hardware sono limitati; un elemento <video> non rilasciato (welcome-vid del popup, wvt-prev anteprima del tool, probe di analisi) occupa il decoder → quando lo scanner accende la camera (anch-essa un video) il riquadro resta vuoto pur con camera attiva. FIX: openScanner ora libera (pause+src vuoto+load) ogni altro <video> della pagina prima di avviare la camera, liberando il decoder. ░░ v2.9.10 — FIX: lo strumento pulizia orfani ora ha la DOPPIA conferma testuale Reset→AZZERA (case-sensitive, passo 2 sbloccato solo dopo passo 1) come tutte le operazioni distruttive, oltre a backup auto + delay 3s + confirm nativo + admin-only. Prima aveva solo confirm nativi. ░░ v2.9.9 — (A) STRUMENTO PULIZIA ORFANI: nuovo bottone «حذف المنتجات بدون فئة» nella Danger Zone (accanto a filiali fantasma): cleanOrphanProducts trova i prodotti con categoryId verso categoria inesistente e li cancella col loro magazzino. Distruttivo → backup auto + doppia conferma + admin-only + reload. (B) DIPENDENZE RESTORE GENERALIZZATE: RESTORE_DEPS + expandDeps nel ripristino a sezioni — products→categories, inventory→products+categories, offers→products+categories, loads→products+suppliers, sales/pointsLedger/orders/clientOrders→customers. Selezionando una collection si includono auto le dipendenze presenti nel backup (con avviso) + garanzia finale in execBtn. ░░ v2.9.8 — DEEP-QC RIPRISTINO (bug prodotti orfani): il ripristino a sezioni (executeSelectiveRestore) reintroduceva i prodotti scelti senza protezione di coerenza → ripristinando «المنتجات» senza «الفئات» i prodotti tornavano orfani (categoryId verso categoria inesistente → sbiaditi). Il full restore invece e coerente (wipe+ricarica tutto). FIX (come v2.8.5 per i punti): in openSelectiveRestore selezionando products si includono automaticamente le categories (se nel backup), con avviso; garanzia finale anche in execBtn. PENDING: strumento pulizia orfani esistenti (distruttivo, da confermare). ░░ v2.9.7 — FIX SCANNER (causa vera, da indizio Dottore: funzionava poi si rompeva tra uno scan e l-altro): la fotocamera non veniva rilasciata alla chiusura → istanza Html5Qrcode zombie teneva la camera occupata → ogni apertura successiva accendeva la camera ma non agganciava il video. Ricostruito il ciclo di vita: stopScanner ora async e ATTENDIBILE (getState→stop→clear); openScanner fa await stopScanner() PRIMA di creare la nuova istanza; se la camera è ancora occupata attende 600ms e riprova con device id esplicito (ultima camera ≈ posteriore). ░░ v2.9.6 — FIX SCANNER (causa reale): camera partiva (permesso OK, messaggio successo, pallino attivo) ma il VIDEO non era visibile → niente da decodificare. html5-qrcode dopo start collassava l-altezza del riquadro; il min-height inline non reggeva. Fix CSS !important: riquadro bc-reader 58vh (min 300px), video width+height 100% object-fit cover, canvas nascosto. Cosi il riquadro ha dimensioni reali e il decoder ha un fotogramma. ░░ v2.9.5 — SCANNER DEEP-QC: diagnostica parlante + fallback CDN. (1) ensureScannerLib carica html5-qrcode con fallback su 3 CDN (jsdelivr/unpkg/cdnjs) se uno è bloccato/lento; script tag riga 436 ha onerror→jsdelivr. (2) openScanner ora async con messaggi specifici nel bc-msg per OGNI causa: contesto non sicuro (HTTPS), libreria non caricata, permesso negato (NotAllowedError), nessuna camera (NotFoundError), camera occupata (NotReadableError), o errore generico con [nome]. Così si vede ESATTAMENTE dove si blocca invece di un camNoAccess generico. Camera non testabile in QC headless. ░░ v2.9.4 — FIX SCANNER: lo scanner barcode si apriva (camera attiva) ma non decodificava MAI nulla, su qualsiasi dispositivo/schermata. Causa: qrbox forzato a Math.max(280, 95% del lato minore) poteva superare le dimensioni reali del video → html5-qrcode blocca la decodifica. Fix: rimosso il qrbox → scansiona l-intero fotogramma (robusto per barcode prodotti 1D e QR clienti). NB: la camera non è testabile nell-ambiente QC headless — verificare dal vivo. ░░ v2.9.3 — FIX: anche gli ordini Instapay PREPAGATI passano per la coda/preparazione (prima saltavano a paid dal popup). Ora: popup → pending (per TUTTI); pesca → preparing (scala stock 1 volta); جاهز → ready; alla consegna payClientOrder mostra per i prepagati "مدفوع مسبقاً" + bottone "تأكيد الاستلام" che chiama finalizeOrderPayment (registra vendita+punti, NESSUN re-incasso). Stock scalato una sola volta (alla presa). Risolve: accettando l-ordine lo stato andava a pronto/pagato invece che in preparazione. ░░ v2.9.2 — FASE 2 VISTA CLIENTE (posizione in coda live): nella card ordine, banner di stato dinamico premium: pending+queueAhead>0 → "N طلبات قبل دورك" (numero in cerchio amber); queueAhead=0 → "أنت التالي!" (gold); preparing → "جاري تحضير طلبك الآن" (forest+chef); ready → "طلبك جاهز للاستلام" (gold). queueAhead viene scritto dal cassiere (loadPendingPoolForCassa) in ogni pending = numero di ordini in attesa DAVANTI (FIFO), letto dal cliente solo dal proprio ordine (rispetta le regole, niente accesso ad ordini altrui). Auto-refresh 20s. NB: oggi gli ordini Instapay prepagati saltano la pila; quelli cash/coperti-da-punti la attraversano. ░░ v2.9.1 — DETTAGLIO ORDINE TAP: nel Pool del cassiere, toccando la card di un ordine (area avatar+nome, con chevron) si apre uno sheet showOrderDetail con la LISTA DEGLI ARTICOLI da preparare (qty × nome + subtotale) + stato + totale + telefono. Risolve: il cassiere deve sapere COSA contiene l-ordine, non solo quanti pezzi. Il bottone azione (ابدأ التحضير/جاهز) resta separato dal tap-dettaglio. ░░ v2.9.0 — MOTORE DEL TURNO ORDINI (Fase 1, lato cassiere): attivato lo stato "preparing" (prima morto). Nuovo ciclo: pending(pila FIFO) → preparing(presa) → ready → paid. Nuova bacheca POOL nel cassiere (loadPendingPoolForCassa): zona "قيد التحضير" (bottone جاهز→ready) + zona "في الطابور" (badge numero FIFO, bottone ابدأ التحضير→preparing). La presa (pending→preparing) ora controlla e SCALA lo stock (prima avveniva a ready) + lock multi-cassiere (preparingBy; se già preso da altro cassiere avvisa). Il popup nuovo ordine (showIncomingOrder) NON salta più a ready: ora salva eventuali modifiche e lascia l-ordine in coda (pending). Eccezione invariata: ordini già pagati online (paidByClient) → finalizzati subito come prima. Fase 2 (vista cliente: posizione in coda live) come prossimo step. ░░ v2.8.7 — AGGREGATO CLASSIFICA (prerequisito sicurezza Firebase): la Sfida del Mese NON legge più tutte le fatture (sales) — ora legge un doc aggregato leggero leaderboard/{YYYY-MM} con solo {conteggio visite + primo nome} per cliente. Aggiornato a ogni vendita (cassa + ritiro ordine) via bumpMonthlyLeaderboard con increment() atomico. Così i clienti vedono la classifica SENZA accedere a importi/prodotti/prove-di-pagamento delle fatture altrui → le regole Firestore possono proteggere completamente sales/pointsLedger. Più sicuro E più efficiente (1 lettura invece di scansionare tutte le fatture). ░░ v2.8.6 — SFIDA DEL MESE (gamification): classifica LIVE nella sezione Punti, top 3 per NUMERO DI VISITE/ACQUISTI del mese corrente (conta le fatture sales del mese per customerId). Podio oro/argento/bronzo con primo nome (privacy) + numero visite; evidenzia la riga del cliente; se fuori dal podio mostra "mركزك X · باقي Z للمركز الثالث"; se senza visite invita alla prima. Countdown a fine mese. Nota "الجوائز تُعلن في البكاريا" che collega alla lavagna. Caricata con IIFE indipendente + cache sessione 120s (window._monthlyRank). Stile forest/gold premium coerente con la sezione punti. ░░ v2.8.5 — FIX COERENZA PUNTI↔FATTURE (bug punti orfani): i punti dei clienti DERIVANO dalle fatture, ma il reset center li gestiva come voci SEPARATE — cancellando solo "sales" i punti (customers.points) e il pointsLedger restavano → saldi orfani basati su fatture inesistenti (caso vissuto dal Dottore). FIX 1 (reset center): selezionare sales/pointsLedger/customers forza automaticamente "customerPoints" (azzera saldi + svuota ledger), con checkbox riflesso nella UI + avviso nel confirm. FIX 2 (field reset): f-cust-points (azzera saldo) ora svuota anche il pointsLedger, altrimenti il saldo=0 restava incoerente col ledger e col livello fedeltà (calcolato dal lifetime earned). Verificati anche: depot reset (solo inventory, nessun punto), storno/reso singolo (già revoca punti via void_revoke — corretto). PER RIPARARE LO STATO ATTUALE: aprire il reset center e selezionare "customerPoints". ░░ v2.8.4 — RIORDINA 1-TAP (Stadio 3/C): card "اطلب من جديد" in cima allo Shop (sotto il banner filiale) che mostra l&apos;ultimo ordine del cliente (nomi articoli + n. pezzi) con bottone "اطلبها مرة أخرى". Caricata in modo INDIPENDENTE dal rendering prodotti (IIFE async, non interferisce). Gli articoli sono RIMAPPATI ai prodotti CORRENTI (prezzo/nome aggiornati; salta i prodotti non più attivi o non visibili al cliente). Tap → merge nel clientCart (non perde un carrello già avviato) + apre il carrello (openClientCart). Solo cliente loggato con un ordine precedente; altrimenti card nascosta. ░░ v2.8.3 — LIVELLI FEDELTÀ (Stadio 2/B): badge Bronze/Silver/Gold in stile gesso sotto il nome, con icona trophy colorata (bronzo CD7F32 / argento BFC6CC / oro C9A84C) + nome livello + progresso "باقي X نقطة للمستوى Y" (o "أعلى مستوى" se Gold). Livello calcolato dai PUNTI GUADAGNATI NEL TEMPO (lifetime earned = somma earn - void_revoke dal pointsLedger), metrica corretta che non scende quando il cliente spende i punti. Soglie: Bronze 0-499, Silver 500-1999, Gold 2000+. Caricato nella stessa cache di sessione (60s) delle mini-stat. VISUALIZZAZIONE pura: non tocca la logica di assegnazione punti (i bonus % effettivi per livello sarebbero uno stadio separato da concordare). ░░ v2.8.2 — 3 MINI-STAT GESSO dentro la lavagna (sotto saluto+punti): طلباتك (totale ordini) · آخر زيارة · عضو منذ MMM YYYY. Dati ordini+vendite caricati async SOLO se cliente loggato, con cache di sessione window._cliMiniStats (60s) per non riquery a ogni re-render/refresh della lavagna. Stile gesso coerente (label gesso + valori oro). NON tocca boardH (lavagna resta fissa, fit-to-fit gestisce il contenuto). ░░ v2.8.1 — ENGAGEMENT DENTRO LA LAVAGNA (approccio corretto): saluto personalizzato in stile GESSO integrato in cima a fixedSectionHtml — saluto contestuale (mattina/pomeriggio/sera AR+EN) + nome + punti in oro + barra progresso gesso (o "puoi usarli ora" se >=50). Mostrato SOLO a cliente loggato (clientProfile.id): sul login screen la lavagna resta invariata. NON tocca boardH: la lavagna resta FISSA e riempie ogni display; il fit-to-fit esistente scala il contenuto se necessario. Nessuna competizione per lo spazio (lezione da v2.7.98/99). ░░ v2.8.0 — RIPRISTINO LAVAGNA FISSA (revert architetturale): annullati gli interventi v2.7.98/v2.7.99 (hero personalizzato + 3 mini-stat sopra la lavagna) che avevano spinto la lavagna giù costringendo a sottrarne l'altezza in modo fragile. La lavagna col bordo in legno torna al comportamento originale: altezza FISSA = viewport - header - nav - 26, riempie lo schermo su QUALSIASI dispositivo, indipendente dal contenuto interno. renderClientHome = SOLO lavagna. boardH e window._chalkResize riallineati alla stessa formula originale. Lezione: non rendere fragile un sistema che funziona per aggiungere una feature; l'engagement va integrato DENTRO la lavagna (sezione in cima) senza spostarla. ░░ v2.7.97 — COMPARE PREMIUM (massimo rendimento): (1) auto-rigenerazione al toggle del checkbox e dei chip mode (niente più "clicca genera di nuovo"); (2) nuova modalità YoY "stesso periodo l&apos;anno scorso" tramite Date.setFullYear(-1), chip selector sotto al checkbox; (3) KPI hero cards premium (top 4 metriche del totale: valore corrente grande + Δ% colorato a pillola + valore precedente piccolo); (4) colonna Δ% per riga nella tabella principale (badge ▲/▼/━ a pillola, "جديد" per prodotti assenti nel periodo precedente, vuoto per sub-rows); (5) messaggio esplicito quando il confronto non è disponibile (rapporti senza riga totale come turnover). tableHtml esteso con param htmlCols (5° opzionale, retro-compatibile). i18n: compareModePrev/Yoy/New/NotAvail. ░░ v2.7.96 — Reports Hub PREMIUM icons: sostituite TUTTE le emoji della shell con icone SVG ic() (REP_SVG mappa ogni rapporto: receipt/box/coins/flame/truck/store/creditCard/building/star/clock/users/warehouse/boxes/refresh/tag/sort/bag/heart/alert/target/gem). Card griglia, titolo risultati, header periodo (clock), bottone genera (search), busy (hourglass), data risultati (calendar) — niente più emoji nelle funzioni. ░░ v2.7.95 — REDESIGN Reports Hub (shell): ricerca INTELLIGENTE con sinonimi AR+EN (REP_KW) che filtra una GRIGLIA di card rapporti responsive (auto-fill minmax 150px → 1 col mobile, più colonne tablet/PC) e premium (icona+label, selezione evidenziata forest+check), al posto del dropdown. Tap su card = seleziona + genera. Ricerca rapporti (hubState.search) separata dal filtro righe tabella (nuovo hubState.tableSearch con barra dedicata nei risultati + re-focus). Logica generate/renderResults/export/chart invariata. ░░ v2.7.94 — NUOVI RAPPORTI PRODOTTO (stadio 1/2) nel Reports Hub: Riordino (sotto-soglia per filiale + qtà suggerita da velocità×14gg), Sell-through (venduto/(stock+venduto)), Turnover (venduto/stock medio + giorni per esaurire), Redditività (profitto + % contributo al profitto totale). Costruiti in buildReportData con soldMap/purMap/stockMap già esistenti, registrati nel return e nel registro REPORTS. Stadio 2 in arrivo: scheda movimenti, storico prezzi, confronto periodi, frequenza riordino. ░░ v2.7.93 — REGOLA NESSUNA CASSA IN NEGATIVO (scelta Dottore: blocco totale, nessuna eccezione): _confirmIfOverdraw ora BLOCCA (toast treInsufficient + return false) invece di confermare → tutte le uscite che la usano (finanziamento HQ, consolidamento filiale, uscita cassa, dotazione custodia, cassiere prendi-dal-fronte, prelievo capitale) sono bloccate sotto-zero. Aggiunto blocco mancante a PAGAMENTO FORNITORE (saldo via _currentTreasury) e RICEZIONE MERCE pagata (saldo affidabile on-demand via _cashAvailFor: branch=branchCashAvailable, hq=carica cashMovements+investments). Custodia cassiere già protetta (return/liquidation). ░░ v2.7.92 — DECIMALI SOLDI INTELLIGENTI: fmt ora mostra 0 decimali se il valore è intero, esattamente 2 decimali se ha parte frazionaria (15→15, 15.5→15.50, 15.55→15.55). Copre TUTTI i punti-soldi del sito in un colpo (prezzi, totali, tesoreria, report, punti-valore). Percentuali con fmt protette con Math.round (discountPct, pct) per restare intere. egpPerPoint (soldi) spostato da fmt2 a fmt. Quantità/punti interi invariati. ░░ v2.7.91 — Upload video benvenuto: analisi+anteprima PLUS upload su Firebase Storage (welcome/welcome.mp4) + URL salvata in Firestore settings/welcomeVideo. showWelcomeVideo ora async: legge URL da Firestore, fallback ./welcome.mp4. _wvtDoUpload: uploadBytesResumable con progress bar live + getDownloadURL + setDoc. VINCOLO DEPLOY: Firebase Storage deve essere abilitato nel progetto lecoin-1f8a5 con rules che permettono write agli admin autenticati. ░░ v2.7.90 — Strumento (admin, in Gestione) "فيديو الترحيب": upload video locale → legge metadati (dimensioni, ratio, peso, durata), verdetti a pillola colorati, anteprima in mock telefono 9:19.5 con toggle ملء/كامل (cover/contain) per vedere bande vs taglio, e specifiche target (1080×1920 9:16, ≤800KB, 5-12s, MP4 muto). Nessuna transcodifica (limite browser): solo analisi+guida in locale, niente upload. ░░ v2.7.89 — Video di benvenuto: popup a tutto schermo allapertura cliente (dopo login), video FILE SEPARATO welcome.mp4 (ottimizzato 279KB, muto per autoplay) referenziato con ./welcome.mp4 — NON incorporato per non appesantire index.html. object-fit:contain su sfondo brand. Skip in alto a sinistra che appare ~1.5s dopo lavvio. Chiusura su skip / fine video / fallback 13s. Mostrato una volta per caricamento (_welcomeShown). VINCOLO DEPLOY: caricare welcome.mp4 nella ROOT del repo lecoinheliopolis.github.io accanto a index.html. ░░ v2.7.88 — Redesign PREMIUM finestra cancellazione categoria: righe prodotto con foto in tondo 46px + nome 14px/800 + meta-chip a pillola (prezzo gold-forest, stock colorato per livello); header lista con badge conteggio a pillola; le due azioni come BLOCCHI distinti (verde "conserva e sposta" con select+bottone; zona pericolo rossa con nota+bottone), label sezione maiuscole. ░░ v2.7.87 — Fix UI: il bottone rosso «احذف الفئة والمنتجات» ora condivide la classe base btn-forest (padding 12px 18px + min-height 44/48px) col verde, sovrascrivendo solo il background → stessa altezza/larghezza. Prima usava solo btn-wide → più basso. ░░ v2.7.86 — Finestra cancellazione categoria: (1) mostra LELENCO dei prodotti collegati (foto+nome+prezzo+stock); (2) aggiunta la scelta «احذف الفئة والمنتجات» (cancella categoria + prodotti + i loro record di magazzino via query productId), con confirm distruttivo esplicito. Resta la via sicura sposta/svuota. ░░ v2.7.85 — PRODOTTI ORFANI: cancellando una categoria i prodotti non restano più orfani silenziosi. openCategoryDelete: se la categoria ha prodotti, chiede dove spostarli (altra categoria o "senza categoria") prima di cancellare. Orfani esistenti: badge ambra "بدون فئة" (≠ esaurito ≠ categoria chiusa) + filtro dedicato con conteggio in Prodotti. isCategoryVisibleToClient: categoryId orfano = senza categoria → non visibile al cliente. ░░ v2.7.84 — CASSIERE: card "La mia custodia" nella schermata cassiere (mostra i soldi in possesso, mappati allo user) + self-service: «خذ من الفرع» (prende dalla cassa filiale alla propria custodia = custody_dotation) e «رجّع للفرع» (rimette in cassa filiale = custody_return, l'inverso). Default: a fine turno i soldi restano in custodia (nessun versamento forzato). branchCashAvailable calcola la cassa filiale solo dai cashMovements. Guardie anti-scoperto. ░░ v2.7.83 — AUDIT proattivo classi-bug ricorrenti: (a) cache→vista vecchia dopo mutazione = pulito (catalogo/offerte/annunci invalidano correttamente; tesoreria già forzata); (b) doppio attributo style su bottoni disabilitati = nessuna occorrenza residua; (c) allineato _salesAll alla regola sales {id:d.id,...}. ░░ v2.7.82 — FIX numeri d'ordine categorie duplicati dopo cancellazione: order assegnato con length+1 (collisioni) + badge da valore grezzo + nessuna ricompattazione al delete. Ora gli ordini sono SEMPRE una sequenza pulita 1..N (auto-riparazione in memoria a ogni render, persistenza in background solo dei cambiati). Creazione usa max+1. ░░ PRECEDENTE v2.7.81 — NUOVA FEATURE: Dotazione cassiere (HQ/filiale ↔ custodia cassiere, somma-zero): dare/riprendere contante in custodia. Nuovi tipi movimento custody_dotation/custody_return in treasuryBalances+treasuryReport; computeCashierCustody ora include dotazioni/rientri/spese-da-custodia nell'atteso; UI openCustodyOp (toggle dare/riprendere, sorgente HQ/filiale, scelta cassiere, guardia scoperto); etichette registro + filtro. Verificato 29/29 invarianti (conservazione, coerenza report↔saldi, reversibilità, expected=custody). ░░ PRECEDENTE v2.7.80 — FIX TESORERIA: (1) cache Analytics non si invalidava dopo dotazione/consolidamento/liquidazione/spesa/investimento/debito → saldi a schermo vecchi → operazioni rifatte per errore (DOPPIO 1325→2650). Ora loadAnalyticsData(true) forza la ricarica dopo OGNI mutazione finanziaria. (2) FIX UI liquidazione: il deposito ora segue il contato per intero (prima si fermava sulla 1ª cifra). Motore tesoreria verificato sano (25/25 invarianti conservazione/coerenza). build 05-Jun-2026 -->
+  <meta name="build-version" content="3.1.0-client-multilang-fr-it-20260609">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#1F3A2E">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Le Coin · POS · v3.0.8</title>
+  <title>Le Coin · POS · v3.1.0</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@1,400;1,500&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Marhey:wght@400;500;700&family=Gochi+Hand&family=Kalam:wght@400;700&family=Lalezar&family=Gulzar&display=swap" rel="stylesheet">
   <!-- 🆕 v2.7.3 — Filtro SVG per effetto gesso ruvido sulle scritte della lavagna -->
   <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
@@ -394,7 +394,7 @@
         <div style="display:flex;align-items:center;gap:10px;">
           <button class="menu-btn" id="menu-btn" aria-label="menu" style="background:rgba(255,255,255,0.12);border:none;color:var(--ivory);width:42px;height:42px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
           <img id="header-logo" class="brand-name" alt="Le Coin" style="height:62px;width:auto;border-radius:11px;">
-          <span style="font-size:9px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:0.5px;">v3.0.8</span>
+          <span style="font-size:9px;color:rgba(255,255,255,0.45);font-weight:700;letter-spacing:0.5px;">v3.1.0</span>
         </div>
         <div class="header-ctrl">
           <select class="branch-sel" id="branch-select"></select>
@@ -516,7 +516,7 @@
     // ============ i18n ============
     const T = {
       ar: {
-        dir:'rtl', langBtn:'EN', email:'البريد الإلكتروني', pass:'كلمة المرور', login:'دخول',
+        dir:'rtl', langBtn:'EN', languageTitle:'اختر اللغة', email:'البريد الإلكتروني', pass:'كلمة المرور', login:'دخول',
         loginErr:'بيانات الدخول غير صحيحة', noProfile:'لا يوجد ملف مستخدم. تواصل مع المسؤول.', inactive:'حسابك متوقف.',
         noBranch:'لا توجد فروع مخصصة لك.',
         products:'المنتجات', categories:'الفئات', logout:'تسجيل الخروج', settings:'الإعدادات', sectionsMenu:'كل الأقسام',
@@ -624,7 +624,7 @@
         needShiftToSell:'لازم تفتح وردية الأول عشان تبدأ البيع', openShiftNow:'افتح وردية دلوقتي', sellingIn:'بتبيع في', branchOfSale:'فرع البيع', confirmBranchHint:'اتأكد من الفرع قبل ما تكمّل الدفع'
       },
       en: {
-        dir:'ltr', langBtn:'ع', email:'Email', pass:'Password', login:'Sign in',
+        dir:'ltr', langBtn:'ع', languageTitle:'Choose language', email:'Email', pass:'Password', login:'Sign in',
         loginErr:'Invalid login credentials', noProfile:'No user profile. Contact the admin.', inactive:'Your account is disabled.',
         noBranch:'No branches assigned to you.',
         products:'Products', categories:'Categories', logout:'Logout', settings:'Settings', sectionsMenu:'All sections',
@@ -730,10 +730,77 @@
         hrs:'h', mins:'m', breakNote:'Break time is not counted in worked hours', resumeFirst:'Resume the break first before closing',
         shiftBranch:'Shift branch', pickBranch:'Choose the branch you will work in', branchLocked:'Branch locked to your open shift',
         needShiftToSell:'You must open a shift first to start selling', openShiftNow:'Open a shift now', sellingIn:'Selling in', branchOfSale:'Sale branch', confirmBranchHint:'Confirm the branch before completing payment'
+      },
+      // 🆕 v3.1.0 — Francese e Italiano: SOLO schermate cliente.
+      // Tutte le chiavi non presenti qui ricadono automaticamente sull'inglese (vedi fallback in t()).
+      // Le traduzioni dei testi cliente verranno popolate nella fase contenuti.
+      fr: {
+        dir:'ltr', langBtn:'EN', languageTitle:'Choisir la langue',
+        clientSignup:'Inscription nouveau client', emailInUse:'E-mail déjà utilisé', invalidEmail:'E-mail invalide', loginErr:'Identifiants de connexion invalides', invalidPhone:'Numéro de téléphone invalide', offerApplied:'Offre appliquée ✓', passHint:'Au moins 6 caractères', phoneInUse:'Ce numéro est déjà enregistré', phoneRequired:'Numéro de téléphone', phoneRequiredErr:'Le numéro de téléphone est obligatoire', phoneWhyHint:'Nous avons besoin de votre numéro pour envoyer les reçus d\'achat via WhatsApp', pwdChanged:'Mot de passe modifié', pwdMismatch:'Les mots de passe ne correspondent pas', pwdTooShort:'Le mot de passe doit comporter au moins 6 caractères', pwdWrong:'Mot de passe actuel incorrect', userPass:'Mot de passe', weakPass:'Mot de passe faible (min 6 caractères)',
+        login:'Se connecter', email:'Email', pass:'Mot de passe',
+        clientName:'Nom', emailOrPhone:'Email ou téléphone', emailOpt:'Email (facultatif)', phoneOpt:'Téléphone (facultatif)', needEmailOrPhone:'Vous devez saisir un email ou un téléphone', nameTaken:'Ce nom est déjà enregistré — veuillez le différencier', chooseBranch:'Choisir la succursale',
+        clientWelcome:'Bienvenue', myOrders:'Mes commandes', myPoints:'Mes points', pointsBalance:'Solde de points', shopNow:'Commander', browseProducts:'Parcourir les produits', clientLogout:'Déconnexion', signupDone:'Inscription réussie ! Connectez-vous',
+        notAvailable:'Indisponible', addToCartC:'Ajouter au panier', myCart:'Panier', sendOrder:'Envoyer la commande', orderSent:'Votre commande a été envoyée à la succursale', emptyCartC:'Votre panier est vide', usePoints:'Utiliser les points de fidélité',
+        favorites:'Favoris', addFav:'Ajouter aux favoris', removeFav:'Retirer des favoris', noFavorites:'Aucun favori pour l\'instant',
+        orderReady:'Votre commande est prête ! Venez la récupérer et payer', orderPreparing:'En préparation',
+        orderStatusPending:'En attente', orderStatusPreparing:'En préparation', orderStatusReady:'Prête', orderStatusPaid:'Payée', orderStatusCancelled:'Annulée', orderStatusHold:'En attente',
+        updateMyData:'Mettre à jour mes infos', myData:'Mes infos',
+        accountSuspended:'Votre compte est suspendu — contactez l\'administration', cancelOrderConfirm:'Voulez-vous vraiment annuler cette commande ? Le stock sera restitué.', stockRestored:'Stock restitué', cancelOrder:'Annuler la commande',
+        myQrCode:'Mon QR code', showMyQr:'Afficher le QR d\'identification', qrHint:'Montrez ce code au caissier pour démarrer votre commande',
+        payNow:'Payer maintenant', payAtPickup:'Payer au retrait', payMethodChoice:'Mode de paiement', cashAtPickup:'Espèces (au retrait)', instapayNow:'Instapay (payer maintenant)', paidByPoints:'Les points de fidélité couvrent entièrement cette commande', paidByPointsHint:'Rien à payer — récupérez simplement votre commande à la succursale',
+        clientInstapayTitle:'Payer avec Instapay', clientInstapayHint:'Envoyez à l\'IPA ci-dessous et joignez le reçu du virement', copyIpa:'Copier l\'IPA', copyAmount:'Copier le montant', copied:'Copié ✓', openInstapayApp:'Ouvrir l\'app Instapay', stepsToFollow:'Étapes :', step1Copy:'Copiez l\'IPA', step2OpenApp:'Ouvrez Instapay et virez le montant', step3Screenshot:'Faites une capture du reçu', step4Upload:'Revenez et téléversez le reçu ici', uploadProofMandatory:'Joindre la preuve de paiement (obligatoire)', chooseProofImage:'Choisir l\'image du reçu', confirmOrder:'Confirmer la commande', orderPaidAlready:'Payé Instapay', viewProof:'Voir le reçu', proofMissing:'Vous devez téléverser la preuve de paiement', cantCancelPaid:'Commande déjà payée — contactez la boutique pour annuler', instapayAliasNotSet:'L\'administration n\'a pas encore configuré Instapay',
+        howPointsWork:'Comment fonctionnent les points ?', pointRule1:'À chaque achat, vous gagnez des points selon le taux de la succursale (voir le tableau ci-dessus)', pointRule2:'1 point = 1 EGP de remise sur la facture', pointRule3:'Il vous faut au moins 50 points pour pouvoir les utiliser', pointRule4:'Les points sont toujours arrondis au supérieur (ex. 0,3 → 1 point)', pointRule5:'Idem à l\'utilisation (ex. article à 23,5 EGP → 24 points)', pointRule6:'Les articles achetés au prix promo ne rapportent PAS de points — ils sont déjà remisés. Au prix normal, les points comptent comme d\'habitude.', pointRule7:'Pendant le Happy Hour : vous avez la remise ET la moitié des points habituels (au lieu de zéro) — le meilleur des deux ☕', offersNoPointsHint:'Les articles en promo ne rapportent pas de points (déjà remisés)',
+        pointsHistory:'Historique des points', noPointsHistory:'Aucune transaction de points pour l\'instant', earned:'Gagnés', spent:'Dépensés', pointsEarned:'Points gagnés', pointsUsed:'Points utilisés',
+        pointsReady:'Disponibles', pointsLocked:'Pas encore débloqués', pointsNeedMore:'Encore ', pointsToUnlock:' points pour les utiliser', pointsCanUseNow:'Vous pouvez utiliser vos points maintenant !',
+        congratsTitle:'Félicitations !', congratsMsg:'Vous avez atteint 50 points ! Vous pouvez les utiliser dès votre prochaine facture', congratsBtn:'Commencer mes achats', ptsRateExplain:'Chaque 10 EGP = 1 point',
+        vipBadge:'Vos taux spéciaux', vipHint:'Notre client VIP — des taux de points plus élevés dans ces succursales', discountPct:'Taux de remise', inMoney:'En argent', pointValue:'Valeur du point',
+        settings:'Paramètres', changePassword:'Changer le mot de passe', currentPassword:'Mot de passe actuel', newPassword:'Nouveau mot de passe', newPasswordAgain:'Confirmer le nouveau mot de passe', required:'Requis', saved:'Enregistré',
+        branchPointsPct:'Taux de points de fidélité (%)', happyHour:'Happy Hour', currency:'EGP', total:'Total', errorGen:'Une erreur est survenue', loyaltyDiscount:'Remise points de fidélité',
+        newArrivalsTitle:'Nouveautés', offersTitle:'Offres', offerAvailable:'Offre disponible', applyOffer:'Appliquer l\'offre',
+        statusOpen:'Ouvert', statusClosed:'Fermé', statusPaused:'En pause', pausedMessage:'Nous rouvrons bientôt', openingHoursToday:'Horaires du jour', hoursClosedToday:'Fermé aujourd\'hui', chalkboardTitle:'Annonces',
+        product:'Produit', noneSet:'Aucun', optional:'Facultatif', unknown:'Inconnu', dayUnit:'jour', daysUnit:'jours', newBadge:'Nouveau'
+      },
+      it: {
+        dir:'ltr', langBtn:'EN', languageTitle:'Scegli la lingua',
+        clientSignup:'Registrazione nuovo cliente', emailInUse:'Email già in uso', invalidEmail:'Email non valida', loginErr:'Credenziali di accesso non valide', invalidPhone:'Numero di telefono non valido', offerApplied:'Offerta applicata ✓', passHint:'Almeno 6 caratteri', phoneInUse:'Questo numero è già registrato', phoneRequired:'Numero di telefono', phoneRequiredErr:'Il numero di telefono è obbligatorio', phoneWhyHint:'Ci serve il tuo numero per inviare le ricevute d\'acquisto via WhatsApp', pwdChanged:'Password modificata', pwdMismatch:'Le password non corrispondono', pwdTooShort:'La password deve avere almeno 6 caratteri', pwdWrong:'Password attuale errata', userPass:'Password', weakPass:'Password debole (min 6 caratteri)',
+        login:'Accedi', email:'Email', pass:'Password',
+        clientName:'Nome', emailOrPhone:'Email o telefono', emailOpt:'Email (facoltativo)', phoneOpt:'Telefono (facoltativo)', needEmailOrPhone:'Devi inserire un\'email o un telefono', nameTaken:'Questo nome è già registrato — distinguilo per favore', chooseBranch:'Scegli la filiale',
+        clientWelcome:'Benvenuto', myOrders:'I miei ordini', myPoints:'I miei punti', pointsBalance:'Saldo punti', shopNow:'Ordina ora', browseProducts:'Sfoglia i prodotti', clientLogout:'Esci', signupDone:'Registrazione completata! Accedi ora',
+        notAvailable:'Non disponibile', addToCartC:'Aggiungi al carrello', myCart:'Carrello', sendOrder:'Invia ordine', orderSent:'Il tuo ordine è stato inviato alla filiale', emptyCartC:'Il carrello è vuoto', usePoints:'Usa i punti fedeltà',
+        favorites:'Preferiti', addFav:'Aggiungi ai preferiti', removeFav:'Rimuovi dai preferiti', noFavorites:'Ancora nessun preferito',
+        orderReady:'Il tuo ordine è pronto! Vieni a ritirarlo e pagare', orderPreparing:'In preparazione',
+        orderStatusPending:'In attesa', orderStatusPreparing:'In preparazione', orderStatusReady:'Pronto', orderStatusPaid:'Pagato', orderStatusCancelled:'Annullato', orderStatusHold:'In attesa',
+        updateMyData:'Aggiorna i miei dati', myData:'I miei dati',
+        accountSuspended:'Il tuo account è sospeso — contatta l\'amministrazione', cancelOrderConfirm:'Vuoi davvero annullare questo ordine? La scorta verrà ripristinata.', stockRestored:'Scorta ripristinata', cancelOrder:'Annulla ordine',
+        myQrCode:'Il mio QR code', showMyQr:'Mostra QR identificativo', qrHint:'Mostra questo codice al cassiere per avviare il tuo ordine',
+        payNow:'Paga ora', payAtPickup:'Paga al ritiro', payMethodChoice:'Metodo di pagamento', cashAtPickup:'Contanti (al ritiro)', instapayNow:'Instapay (paga ora)', paidByPoints:'I punti fedeltà coprono interamente questo ordine', paidByPointsHint:'Niente da pagare — ritira semplicemente il tuo ordine in filiale',
+        clientInstapayTitle:'Paga con Instapay', clientInstapayHint:'Invia all\'IPA qui sotto e allega la ricevuta del bonifico', copyIpa:'Copia IPA', copyAmount:'Copia importo', copied:'Copiato ✓', openInstapayApp:'Apri l\'app Instapay', stepsToFollow:'Passaggi :', step1Copy:'Copia l\'IPA', step2OpenApp:'Apri Instapay e trasferisci l\'importo', step3Screenshot:'Fai uno screenshot della ricevuta', step4Upload:'Torna e carica qui la ricevuta', uploadProofMandatory:'Allega la prova di pagamento (obbligatorio)', chooseProofImage:'Scegli l\'immagine della ricevuta', confirmOrder:'Conferma ordine', orderPaidAlready:'Pagato Instapay', viewProof:'Vedi ricevuta', proofMissing:'Devi caricare la prova di pagamento', cantCancelPaid:'Ordine già pagato — contatta il negozio per annullare', instapayAliasNotSet:'L\'amministrazione non ha ancora configurato Instapay',
+        howPointsWork:'Come funzionano i punti?', pointRule1:'Quando acquisti, guadagni punti in base alla percentuale della filiale (vedi tabella sopra)', pointRule2:'1 punto = 1 EGP di sconto sul conto', pointRule3:'Servono almeno 50 punti per poterli usare', pointRule4:'I punti vengono sempre arrotondati per eccesso (es. 0,3 → 1 punto)', pointRule5:'Lo stesso quando li spendi (es. articolo da 23,5 EGP → 24 punti)', pointRule6:'Gli articoli acquistati al prezzo promo NON danno punti — sono già scontati. Al prezzo pieno, i punti contano come al solito.', pointRule7:'Durante l\'Happy Hour: ottieni lo sconto E metà dei punti abituali (invece di zero) — il meglio di entrambi ☕', offersNoPointsHint:'Gli articoli in offerta non danno punti (già scontati)',
+        pointsHistory:'Storico punti', noPointsHistory:'Ancora nessun movimento punti', earned:'Guadagnati', spent:'Spesi', pointsEarned:'Punti guadagnati', pointsUsed:'Punti usati',
+        pointsReady:'Disponibili', pointsLocked:'Non ancora sbloccati', pointsNeedMore:'Ti servono ancora ', pointsToUnlock:' punti per usarli', pointsCanUseNow:'Puoi usare i tuoi punti ora!',
+        congratsTitle:'Congratulazioni!', congratsMsg:'Hai raggiunto 50 punti! Puoi usarli dal tuo prossimo conto', congratsBtn:'Inizia gli acquisti', ptsRateExplain:'Ogni 10 EGP = 1 punto',
+        vipBadge:'Le tue tariffe speciali', vipHint:'Il nostro cliente VIP — tariffe punti più alte in queste filiali', discountPct:'Percentuale di sconto', inMoney:'In denaro', pointValue:'Valore del punto',
+        settings:'Impostazioni', changePassword:'Cambia password', currentPassword:'Password attuale', newPassword:'Nuova password', newPasswordAgain:'Conferma nuova password', required:'Obbligatorio', saved:'Salvato',
+        branchPointsPct:'Percentuale punti fedeltà (%)', happyHour:'Happy Hour', currency:'EGP', total:'Totale', errorGen:'Si è verificato un errore', loyaltyDiscount:'Sconto punti fedeltà',
+        newArrivalsTitle:'Novità', offersTitle:'Offerte', offerAvailable:'Offerta disponibile', applyOffer:'Applica offerta',
+        statusOpen:'Aperto', statusClosed:'Chiuso', statusPaused:'In pausa', pausedMessage:'Riapriamo a breve', openingHoursToday:'Orari di oggi', hoursClosedToday:'Chiuso oggi', chalkboardTitle:'Annunci',
+        product:'Prodotto', noneSet:'Nessuno', optional:'Facoltativo', unknown:'Sconosciuto', dayUnit:'giorno', daysUnit:'giorni', newBadge:'Nuovo'
       }
     };
     let lang = localStorage.getItem('lecoin_lang') || 'ar';
-    const t = k => T[lang][k] || k;
+    // 🆕 v3.1.0 — i18n a 4 lingue (solo schermate cliente per fr/it).
+    // Fallback EN: ogni chiave non tradotta in fr/it ricade sull'inglese (mai sulla chiave grezza).
+    const t = k => (T[lang] && T[lang][k]) || T.en[k] || k;
+    // Helper per i ternari inline delle schermate cliente: L(ar, en, fr, it).
+    // fr/it ricadono su en se non forniti. Per ar/en il comportamento è identico a prima.
+    const L = (ar, en, fr, it) => lang==='ar' ? ar : lang==='fr' ? (fr!=null?fr:en) : lang==='it' ? (it!=null?it:en) : en;
+    // Elenco lingue selezionabili dal cliente (lo staff resta AR/EN).
+    const CLIENT_LANGS = [
+      { code:'ar', label:'العربية' },
+      { code:'en', label:'English' },
+      { code:'fr', label:'Français' },
+      { code:'it', label:'Italiano' }
+    ];
     /** Normalizza un numero per wa.me: rimuove +/spazi/trattini, converte prefissi locali egiziani
      *  0111... → 20111... | 00201... → 201... | +201... → 201... | 201... → 201...
      */
@@ -745,12 +812,57 @@
       return n.replace(/\D/g,'');       // rimuovi eventuali lettere residue
     }
     function applyLang() {
-      document.documentElement.lang = lang; document.documentElement.dir = T[lang].dir;
-      document.body.dir = T[lang].dir;
+      const dir = (T[lang] && T[lang].dir) || 'ltr'; // fr/it = ltr; solo ar = rtl
+      document.documentElement.lang = lang; document.documentElement.dir = dir;
+      document.body.dir = dir;
+      // Toggle staff (AR/EN): mostra la lingua opposta
       $('lang-btn') && ($('lang-btn').textContent = T[lang].langBtn);
       $('login-lang') && ($('login-lang').textContent = T[lang].langBtn);
+      // Picker cliente a 4 vie: mostra l'etichetta breve della lingua corrente
+      const clBtn = $('client-lang');
+      if(clBtn){
+        const cur = CLIENT_LANGS.find(l=>l.code===lang) || CLIENT_LANGS[0];
+        clBtn.textContent = cur.code.toUpperCase();
+        clBtn.setAttribute('aria-label', cur.label);
+      }
     }
     function toggleLang() { lang = lang==='ar'?'en':'ar'; localStorage.setItem('lecoin_lang',lang); applyLang(); refreshLoginLabels(); if(profile) render(); else if(clientProfile && typeof clientTab!=='undefined' && clientTab==='home' && typeof renderClientHome==='function') renderClientHome(); }
+
+    // 🆕 v3.1.0 — Imposta la lingua, persiste (localStorage + profilo cliente su Firestore) e ri-renderizza all'istante.
+    async function setLang(code, opts){
+      opts = opts || {};
+      if(!CLIENT_LANGS.some(l=>l.code===code)) return;
+      lang = code;
+      try{ localStorage.setItem('lecoin_lang', lang); }catch(e){}
+      applyLang();
+      refreshLoginLabels();
+      // Persisti sul profilo cliente loggato (così la lingua lo segue su ogni dispositivo)
+      if(!opts.skipPersist && clientProfile && clientProfile.id){
+        clientProfile.lang = lang;
+        try{ await updateDoc(doc(db,'customers',clientProfile.id), { lang }); }catch(e){ console.warn('lang persist failed', e); }
+      }
+      // Re-render istantaneo del contesto attivo
+      if(profile){ render(); }
+      else if(clientProfile && typeof renderClientTab==='function'){ renderClientTab(); }
+    }
+
+    // Picker lingua a 4 vie per il cliente (bottom sheet con le 4 opzioni).
+    function openClientLangPicker(){
+      const rows = CLIENT_LANGS.map(l=>`
+        <button class="cl-lang-row" data-code="${l.code}" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;background:${l.code===lang?'var(--ivory-dark)':'var(--ivory)'};border:1.5px solid ${l.code===lang?'var(--gold)':'rgba(31,58,46,0.12)'};border-radius:13px;margin-bottom:9px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;color:var(--forest);">
+          <span>${l.label}</span>
+          ${l.code===lang?ic('check',18,2.6):'<span style="width:18px;"></span>'}
+        </button>`).join('');
+      $('sheet-root').innerHTML = `<div class="overlay centered" id="ov" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">
+        <div style="text-align:center;margin-bottom:14px;">
+          <div style="font-size:16px;font-weight:800;color:var(--forest);">${t('languageTitle')}</div>
+        </div>
+        <div>${rows}</div>
+      </div></div>`;
+      document.querySelectorAll('.cl-lang-row').forEach(b=>{
+        b.onclick = ()=>{ closeSheet(); setLang(b.dataset.code); };
+      });
+    }
 
     // ============ STATE ============
     let user=null, profile=null, branches=[], currentBranchId=null;
@@ -1032,7 +1144,7 @@
       $('l-email-lbl').textContent=t('email'); $('l-pass-lbl').textContent=t('pass');
       $('login-btn').textContent=t('login');
       const sl=$('client-signup-lbl'); if(sl) sl.textContent=t('clientSignup');
-      const sh=$('client-signup-hint'); if(sh) sh.textContent=lang==='ar'?'عميل جديد؟':'New customer?';
+      const sh=$('client-signup-hint'); if(sh) sh.textContent=L('عميل جديد؟','New customer?','Nouveau client ?','Nuovo cliente?');
     }
     $('login-lang').onclick=toggleLang;
     $('login-btn').onclick=async()=>{
@@ -1688,12 +1800,12 @@
         offer = allActive.find(o => o.id === offerId);
       } catch(e){ console.warn('[hh-sheet] load offers failed:', e); }
       if(!offer || (offer.scope||'product') !== 'category'){
-        toast(lang==='ar' ? 'العرض ده مش متاح حالياً' : 'This offer is no longer available', true);
+        toast(L('العرض ده مش متاح حالياً','This offer is no longer available','Cette offre n\'est plus disponible','Questa offerta non è più disponibile'), true);
         return;
       }
       // Verifica che sia attiva ORA (se nel frattempo è uscita dalla finestra oraria)
       if(typeof isOfferActiveNow === 'function' && !isOfferActiveNow(offer)){
-        toast(lang==='ar' ? 'العرض ده مش شغّال دلوقتي' : 'Offer is not active now', true);
+        toast(L('العرض ده مش شغّال دلوقتي','Offer is not active now','Cette offre n\'est pas active maintenant','Offerta non attiva al momento'), true);
         return;
       }
       // Carica catalogo se mancante
@@ -1749,7 +1861,7 @@
           ? `<button class="hh-add" data-pid="${p.id}" data-offer-id="${offer.id}" data-price="${showPrice}" style="padding:9px 0;font-size:12.5px;gap:6px;border-radius:10px;font-weight:700;background:var(--amber);color:#fff;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;">${ic('plus',13,2.6)}<span>${t('addToCartC')}</span></button>`
           : (cliBranch
               ? `<div style="font-size:11.5px;color:var(--red);font-weight:700;text-align:center;padding:7px;background:rgba(192,72,72,0.07);border-radius:8px;">${t('notAvailable')}</div>`
-              : `<div style="font-size:11px;color:rgba(26,26,26,0.5);font-weight:600;text-align:center;padding:7px;line-height:1.3;">${lang==='ar'?'اختر فرع للطلب':'Choose a branch to order'}</div>`);
+              : `<div style="font-size:11px;color:rgba(26,26,26,0.5);font-weight:600;text-align:center;padding:7px;line-height:1.3;">${L('اختر فرع للطلب','Choose a branch to order','Choisissez une succursale pour commander','Scegli una filiale per ordinare')}</div>`);
         return `<div style="background:#fff;border:1.5px solid rgba(216,142,42,0.42);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 3px 10px rgba(216,142,42,0.08);${!inStock?'opacity:0.6;':''}">
           <div style="position:relative;">${photo}${ribbon}</div>
           <div style="min-height:38px;display:flex;flex-direction:column;justify-content:flex-start;">
@@ -1763,10 +1875,10 @@
         </div>`;
       }).join('');
       const emptyMsg = hhProducts.length === 0
-        ? `<div class="empty" style="padding:36px 16px;text-align:center;color:rgba(26,26,26,0.55);font-size:13px;">${lang==='ar'?'مفيش منتجات في الفئات دي حالياً':'No products in these categories right now'}</div>`
+        ? `<div class="empty" style="padding:36px 16px;text-align:center;color:rgba(26,26,26,0.55);font-size:13px;">${L('مفيش منتجات في الفئات دي حالياً','No products in these categories right now','Aucun produit dans ces catégories pour le moment','Nessun prodotto in queste categorie al momento')}</div>`
         : '';
       const goShopBtn = !cliBranch
-        ? `<button class="btn-forest btn-wide" id="hh-go-shop" style="margin-top:14px;padding:13px;font-size:14px;gap:8px;border-radius:11px;">${ic('bag',16,2.2)}<span>${lang==='ar'?'اختر فرع للتسوّق':'Choose a branch to shop'}</span></button>`
+        ? `<button class="btn-forest btn-wide" id="hh-go-shop" style="margin-top:14px;padding:13px;font-size:14px;gap:8px;border-radius:11px;">${ic('bag',16,2.2)}<span>${L('اختر فرع للتسوّق','Choose a branch to shop','Choisissez une succursale pour acheter','Scegli una filiale per acquistare')}</span></button>`
         : '';
       $('sheet-root').innerHTML = `<div class="overlay centered" id="ov" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">
         <div class="sheet-head"><div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;border-radius:10px;background:rgba(216,142,42,0.14);color:var(--amber);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">${ic('sparkle',18,2.2)}</div><div><div class="sheet-title">${t('happyHour')}</div></div></div><button class="close-x" id="cx" onclick="closeSheet()">×</button></div>
@@ -1819,7 +1931,7 @@
     async function showClientProductDetail(productId){
       if(!productId) return;
       const p = (products||[]).find(x => x.id === productId);
-      if(!p){ toast(lang==='ar'?'المنتج مش متاح':'Product not available', true); return; }
+      if(!p){ toast(L('المنتج مش متاح','Product not available','Produit non disponible','Prodotto non disponibile'), true); return; }
       const desc = lang==='ar' ? (p.descAr||'') : (p.descEn||'');
       // Offerta attiva (Happy Hour o product offer)
       const cliBranch = clientBranchId || null;
@@ -1862,7 +1974,7 @@
       // Pulsante add
       const inCart = clientCart.find(i => i.id === p.id);
       const addBtnHtml = !cliBranch
-        ? `<div style="font-size:12.5px;color:rgba(26,26,26,0.55);font-weight:600;text-align:center;padding:11px;background:var(--ivory);border-radius:11px;">${lang==='ar'?'اختر فرع للطلب':'Choose a branch to order'}</div>`
+        ? `<div style="font-size:12.5px;color:rgba(26,26,26,0.55);font-weight:600;text-align:center;padding:11px;background:var(--ivory);border-radius:11px;">${L('اختر فرع للطلب','Choose a branch to order','Choisissez une succursale pour commander','Scegli una filiale per ordinare')}</div>`
         : !inStock
           ? `<div style="font-size:13px;color:var(--red);font-weight:700;text-align:center;padding:11px;background:rgba(192,72,72,0.07);border-radius:11px;">${t('notAvailable')}</div>`
           : `<button class="btn-${isHH?'amber':'forest'} btn-wide" id="cpd-add" style="padding:14px;font-size:14.5px;font-weight:700;gap:8px;border-radius:11px;${isHH?'background:var(--amber);color:#fff;border:none;':''}">${ic(inCart?'cart':'plus',16,2.4)}<span>${inCart?`${t('addToCartC')} (×${fmt(inCart.qty)})`:t('addToCartC')}</span></button>`;
@@ -2029,7 +2141,7 @@
       const st = STATUS_STYLE[status.state] || STATUS_STYLE.closed;
       // Data oggi (locale)
       const today = new Date();
-      const dateStr = today.toLocaleDateString(lang==='ar'?'ar-EG':'en-GB', { weekday:'long', day:'numeric', month:'long', ...(lang==='ar'?{numberingSystem:'arab'}:{}) });
+      const dateStr = today.toLocaleDateString(lang==='ar'?'ar-EG':lang==='fr'?'fr-FR':lang==='it'?'it-IT':'en-GB', { weekday:'long', day:'numeric', month:'long', ...(lang==='ar'?{numberingSystem:'arab'}:{}) });
       // 🆕 v2.7.2 — Palette gesso (colori rari)
       const CHALK = '#f5f0dc';            // gesso cream principale
       const CHALK_SOFT = 'rgba(245,240,220,0.75)';  // gesso desaturato
@@ -2075,7 +2187,7 @@
           } else {
             timeLeft = (dH>0?dH+'h ':'') + dM + 'min';
           }
-          const closeLbl = lang==='ar' ? 'هنقفل بعد' : 'Closes in';
+          const closeLbl = L('هنقفل بعد','Closes in','Ferme dans','Chiude tra');
           closingSoonHtml = `<div style="text-align:center;margin-top:10px;"><span style="display:inline-flex;align-items:center;gap:7px;background:rgba(201,168,76,0.13);border:1px solid rgba(201,168,76,0.4);border-radius:20px;padding:5px 14px;${bodyChalk}font-size:17px;color:${GOLD_HDR};">${ic('hourglass',16,2)} ${closeLbl} <span style="font-weight:700;">${timeLeft}</span></span></div>`;
         }
       }
@@ -2085,13 +2197,18 @@
       const _cliLogged = !!(typeof clientProfile!=='undefined' && clientProfile && clientProfile.id);
       if(_cliLogged){
         const _gh = new Date().getHours();
-        const _greet = lang==='ar' ? (_gh<12?'صباح الخير':(_gh<17?'أهلاً':'مساء الخير')) : (_gh<12?'Good morning':(_gh<17?'Hello':'Good evening'));
-        const _fName = String(clientProfile.name||'').split(' ')[0] || (lang==='ar'?'صديقنا':'friend');
+        const _greet = L(
+          (_gh<12?'صباح الخير':(_gh<17?'أهلاً':'مساء الخير')),
+          (_gh<12?'Good morning':(_gh<17?'Hello':'Good evening')),
+          (_gh<12?'Bonjour':(_gh<17?'Bonjour':'Bonsoir')),
+          (_gh<12?'Buongiorno':(_gh<17?'Ciao':'Buonasera'))
+        );
+        const _fName = String(clientProfile.name||'').split(' ')[0] || L('صديقنا','friend','ami','amico');
         const _pts = clientProfile.points||0;
         const _ready = _pts >= MIN_POINTS_REDEEM;
         const _need = Math.max(0, MIN_POINTS_REDEEM - _pts);
         const _pctP = Math.min(100, Math.round((_pts/MIN_POINTS_REDEEM)*100));
-        const _ptsWord = lang==='ar'?'نقطة':'pts';
+        const _ptsWord = L('نقطة','pts','pts','pt');
         const _progressLine = _ready
           ? `<span style="${bodyChalk}font-size:16px;color:${GOLD_HDR};display:inline-flex;align-items:center;gap:6px;">${ic('sparkle',15,2)}<span>${t('pointsCanUseNow')}</span></span>`
           : `<span style="display:inline-flex;align-items:center;gap:8px;">
@@ -2119,17 +2236,17 @@
           _miniTotal=_c.total; _miniLastTs=_c.lastTs; _miniEarned=_c.earned||0;
         }catch(e){ console.warn('[chalkboard] mini-stats failed:', e); }
         let _lastLbl='—';
-        if(_miniLastTs){ const _dd=Math.floor((Date.now()-_miniLastTs)/86400000); _lastLbl = _dd===0?(lang==='ar'?'اليوم':'Today'):_dd===1?(lang==='ar'?'أمس':'Yesterday'):_dd<30?(lang==='ar'?('قبل '+fmt(_dd)+' يوم'):(fmt(_dd)+'d')):(lang==='ar'?'+شهر':'1m+'); }
+        if(_miniLastTs){ const _dd=Math.floor((Date.now()-_miniLastTs)/86400000); _lastLbl = _dd===0?L('اليوم','Today','Aujourd\'hui','Oggi'):_dd===1?L('أمس','Yesterday','Hier','Ieri'):_dd<30?L('قبل '+fmt(_dd)+' يوم',fmt(_dd)+'d',fmt(_dd)+'j',fmt(_dd)+'g'):L('+شهر','1m+','1m+','1m+'); }
         let _memLbl='—';
-        if(clientProfile.createdAt){ try{ const _md=new Date(clientProfile.createdAt); const _moAr=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']; const _moEn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const _mo=lang==='ar'?_moAr[_md.getMonth()]:_moEn[_md.getMonth()]; const _yr=lang==='ar'?toArDigits(String(_md.getFullYear())):String(_md.getFullYear()); _memLbl=_mo+' '+_yr; }catch(e){} }
+        if(clientProfile.createdAt){ try{ const _md=new Date(clientProfile.createdAt); const _moAr=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']; const _moEn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; const _moFr=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']; const _moIt=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']; const _mo=L(_moAr[_md.getMonth()],_moEn[_md.getMonth()],_moFr[_md.getMonth()],_moIt[_md.getMonth()]); const _yr=lang==='ar'?toArDigits(String(_md.getFullYear())):String(_md.getFullYear()); _memLbl=_mo+' '+_yr; }catch(e){} }
         const _statChip=(lbl,val)=>`<span style="${bodyChalk}font-size:13.5px;opacity:0.92;">${lbl} <span style="color:${GOLD_HDR};font-weight:700;">${val}</span></span>`;
         const _dotSep=`<span style="color:${GOLD_HDR};opacity:0.45;">·</span>`;
-        const _statsRow=`<div style="display:flex;align-items:center;justify-content:center;gap:6px 14px;margin-top:11px;flex-wrap:wrap;">${_statChip(lang==='ar'?'طلباتك':'Orders',fmt(_miniTotal))}${_dotSep}${_statChip(lang==='ar'?'آخر زيارة':'Last visit',_lastLbl)}${_dotSep}${_statChip(lang==='ar'?'عضو منذ':'Member since',_memLbl)}</div>`;
+        const _statsRow=`<div style="display:flex;align-items:center;justify-content:center;gap:6px 14px;margin-top:11px;flex-wrap:wrap;">${_statChip(L('طلباتك','Orders','Commandes','Ordini'),fmt(_miniTotal))}${_dotSep}${_statChip(L('آخر زيارة','Last visit','Dernière visite','Ultima visita'),_lastLbl)}${_dotSep}${_statChip(L('عضو منذ','Member since','Membre depuis','Membro dal'),_memLbl)}</div>`;
         // 🆕 v2.8.3 — LIVELLO FEDELTÀ (Bronze/Silver/Gold) calcolato dai punti guadagnati nel tempo (lifetime earned)
         const _TIERS=[
-          {min:0,    ar:'برونزي', en:'Bronze', color:'#CD7F32'},
-          {min:500,  ar:'فضي',    en:'Silver', color:'#BFC6CC'},
-          {min:2000, ar:'ذهبي',   en:'Gold',   color:'#C9A84C'}
+          {min:0,    ar:'برونزي', en:'Bronze', fr:'Bronze', it:'Bronzo',  color:'#CD7F32'},
+          {min:500,  ar:'فضي',    en:'Silver', fr:'Argent', it:'Argento', color:'#BFC6CC'},
+          {min:2000, ar:'ذهبي',   en:'Gold',   fr:'Or',     it:'Oro',     color:'#C9A84C'}
         ];
         let _tIdx=0; for(let i=_TIERS.length-1;i>=0;i--){ if(_miniEarned>=_TIERS[i].min){ _tIdx=i; break; } }
         const _tier=_TIERS[_tIdx]; const _next=_TIERS[_tIdx+1]||null;
@@ -2137,18 +2254,18 @@
         const _tierBadge=`<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-top:9px;flex-wrap:wrap;">
             <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.18);border:1px solid ${_tier.color};border-radius:20px;padding:4px 13px;">
               <span style="display:inline-flex;color:${_tier.color};filter:drop-shadow(0 0 3px ${_tier.color}88);">${ic('trophy',16,2.1)}</span>
-              <span style="font-family:${chalkFont};color:${_tier.color};font-size:16px;font-weight:700;letter-spacing:0.5px;">${lang==='ar'?_tier.ar:_tier.en}</span>
+              <span style="font-family:${chalkFont};color:${_tier.color};font-size:16px;font-weight:700;letter-spacing:0.5px;">${L(_tier.ar,_tier.en,_tier.fr,_tier.it)}</span>
             </span>
             ${_next
-              ? `<span style="${bodyChalk}font-size:13px;opacity:0.82;">${lang==='ar'?('باقي '+fmt(_toNext)+' نقطة للمستوى '+_next.ar):(fmt(_toNext)+' pts to '+_next.en)}</span>`
-              : `<span style="${bodyChalk}font-size:13px;color:${GOLD_HDR};opacity:0.92;display:inline-flex;align-items:center;gap:5px;">${ic('sparkle',13,2)}<span>${lang==='ar'?'أعلى مستوى':'Top tier'}</span></span>`
+              ? `<span style="${bodyChalk}font-size:13px;opacity:0.82;">${L('باقي '+fmt(_toNext)+' نقطة للمستوى '+_next.ar, fmt(_toNext)+' pts to '+_next.en, fmt(_toNext)+' pts vers '+_next.fr, fmt(_toNext)+' pt verso '+_next.it)}</span>`
+              : `<span style="${bodyChalk}font-size:13px;color:${GOLD_HDR};opacity:0.92;display:inline-flex;align-items:center;gap:5px;">${ic('sparkle',13,2)}<span>${L('أعلى مستوى','Top tier','Niveau max','Livello max')}</span></span>`
             }
           </div>`;
         clientGreetHtml = `<div style="text-align:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed rgba(245,240,220,0.25);">
             <div style="${titleDouble}font-size:27px;transform:rotate(-0.5deg);">${_greet}، ${esc(_fName)}</div>
             ${_tierBadge}
             <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:11px;flex-wrap:wrap;">
-              <span style="${bodyChalk}font-size:17px;display:inline-flex;align-items:baseline;gap:5px;">${lang==='ar'?'نقاطك':'Your points'} <span style="color:${GOLD_HDR};font-weight:700;font-size:23px;">${fmt(_pts)}</span><span style="opacity:0.8;font-size:13px;">${_ptsWord}</span></span>
+              <span style="${bodyChalk}font-size:17px;display:inline-flex;align-items:baseline;gap:5px;">${L('نقاطك','Your points','Vos points','I tuoi punti')} <span style="color:${GOLD_HDR};font-weight:700;font-size:23px;">${fmt(_pts)}</span><span style="opacity:0.8;font-size:13px;">${_ptsWord}</span></span>
               ${_progressLine}
             </div>
             ${_statsRow}
@@ -2210,10 +2327,12 @@
           }
           const msgAr = `خصم ${toArDigits(String(pct))}٪ على ${catNamesAr || ''}${windowStr ? ' · '+toArDigits(o.timeStart||'')+'–'+toArDigits(o.timeEnd||'') : ''}`;
           const msgEn = `−${pct}% on ${catNamesEn || ''}${windowStr}`;
+          const msgFr = `−${pct}% sur ${catNamesEn || ''}${windowStr}`;
+          const msgIt = `−${pct}% su ${catNamesEn || ''}${windowStr}`;
           annItems.unshift({
             id: 'happy-'+o.id,
-            titleAr: 'هابي أور', titleEn: 'Happy Hour',
-            messageAr: msgAr, messageEn: msgEn,
+            titleAr: 'هابي أور', titleEn: 'Happy Hour', titleFr: 'Happy Hour', titleIt: 'Happy Hour',
+            messageAr: msgAr, messageEn: msgEn, messageFr: msgFr, messageIt: msgIt,
             icon: 'sparkle', pinned: true,
             _autoHappyHour: true,
             _hhOfferId: o.id  // 🆕 v2.7.10 — usato per aprire modal con prodotti scontati
@@ -2226,7 +2345,7 @@
       // ====== 🆕 v2.8 — RACCOLGO TUTTI I DATI PRIMA per calcolare la DENSITÀ globale ======
       const currency = t('currency');
       const GOLD = '#C9A84C';
-      const newLabel = lang==='ar' ? 'جديد' : 'NEW';
+      const newLabel = L('جديد','NEW','NOUVEAU','NUOVO');
       // 🆕 v2.7.11 — Carico inventory del branch UNA volta: usato per filtrare nuovi arrivi + offerte
       //   Logica: se la lavagna mostra un branch (anche default, non scelto esplicitamente),
       //   escludiamo i prodotti out-of-stock di quel branch. Il branch della lavagna È il riferimento
@@ -2306,15 +2425,16 @@
           const annIcon = a.icon || 'megaphone';
           const pin = a.pinned ? `<span style="display:inline-flex;align-items:center;opacity:0.75;color:#E8C76A;">${ic('pin',13,2)}</span>` : '';
           const tilt = isSingleAnn ? 0 : (((a.id||'x').charCodeAt(0) % 5) - 2) * 0.4;
-          // 🆕 v2.7.3 — Testo nella lingua corrente con fallback al campo legacy
-          const annTitle = lang==='ar' ? (a.titleAr||a.title||'') : (a.titleEn||a.title||'');
-          const annMsg = lang==='ar' ? (a.messageAr||a.message||'') : (a.messageEn||a.message||'');
+          // 🆕 v3.1.0 — Testo nella lingua corrente; FR/IT fanno fallback su EN (poi sul campo legacy)
+          const _pickAnn = (ar,en,fr,it)=> (lang==='ar' ? ar : lang==='fr' ? (fr||en) : lang==='it' ? (it||en) : en) || '';
+          const annTitle = _pickAnn(a.titleAr||a.title, a.titleEn||a.title, a.titleFr, a.titleIt);
+          const annMsg = _pickAnn(a.messageAr||a.message, a.messageEn||a.message, a.messageFr, a.messageIt);
           // 🆕 v2.7.10 — Se è uno pseudo-annuncio Happy Hour, lo rendo cliccabile (apre modal prodotti)
           const isHHClickable = a._autoHappyHour && a._hhOfferId;
           const hhOnclick = isHHClickable ? ` onclick="event.stopPropagation();window.openHappyHourSheet('${a._hhOfferId}')" data-hh-offer-id="${a._hhOfferId}"` : '';
           const hhCursorStyle = isHHClickable ? 'cursor:pointer;' : '';
           const tapHint = isHHClickable
-            ? `<div style="${softChalk};font-size:${mz(13)}px;margin-top:${mz(6)}px;opacity:0.85;display:flex;align-items:center;justify-content:center;gap:5px;"><span style="font-size:${mz(14)}px;">👆</span><span>${lang==='ar'?'اضغط لعرض المنتجات':'Tap to see products'}</span></div>`
+            ? `<div style="${softChalk};font-size:${mz(13)}px;margin-top:${mz(6)}px;opacity:0.85;display:flex;align-items:center;justify-content:center;gap:5px;"><span style="font-size:${mz(14)}px;">👆</span><span>${L('اضغط لعرض المنتجات','Tap to see products','Appuyez pour voir les produits','Tocca per vedere i prodotti')}</span></div>`
             : '';
           if(isSingleAnn){
             // 🆕 v2.7.3 — Annuncio singolo: grande, centrato, titolo + testo affiancati
@@ -2622,6 +2742,12 @@
           const csnap=await getDoc(doc(db,'customers',u.uid));
           if(csnap.exists()){
             clientProfile={id:u.uid,...csnap.data()};
+            // 🆕 v3.1.0 — applica la lingua salvata sul profilo cliente (segue l'utente su ogni dispositivo)
+            if(clientProfile.lang && CLIENT_LANGS.some(l=>l.code===clientProfile.lang)){
+              lang = clientProfile.lang;
+              try{ localStorage.setItem('lecoin_lang', lang); }catch(e){}
+              applyLang();
+            }
             $('login-screen').classList.add('hidden'); $('app').classList.add('hidden'); $('client-app').classList.remove('hidden');
             $('login-btn').textContent=t('login');
             await loadBranches(true); // كل الفروع النشطة للعميل
@@ -10796,7 +10922,7 @@
         // onAuthStateChanged si innesca e gestisce l'ingresso
       }catch(e){
         if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request')
-          toast((lang==='ar'?'خطأ في تسجيل الدخول: ':'Login error: ')+(e.message||e.code||''),true);
+          toast(L('خطأ في تسجيل الدخول: ','Login error: ','Erreur de connexion : ','Errore di accesso: ')+(e.message||e.code||''),true);
       }finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; } }
     }
     async function handleGoogleLogin(){ await handleSocialLogin(new GoogleAuthProvider()); }
@@ -12159,8 +12285,9 @@
       if(LOGO){ $('client-logo').src=LOGO; }
       // حمّل إعدادات Instapay (يحتاجها العميل لو اختار يدفع بـ Instapay)
       loadInstapayCfg();
-      $('client-lang').textContent=lang==='ar'?'EN':'ع';
-      $('client-lang').onclick=()=>{ lang=lang==='ar'?'en':'ar'; applyLang(); startClientApp(); };
+      // 🆕 v3.1.0 — picker lingua a 4 vie (AR/EN/FR/IT). La label la imposta applyLang().
+      applyLang();
+      $('client-lang').onclick = ()=> openClientLangPicker();
       // ☰ قائمة منسدلة: اختيار الفرع
       $('client-menu-btn').onclick=()=>openClientBranchMenu();
       // ⚙️ قائمة الإعدادات: بياناتي + خروج
@@ -12168,7 +12295,7 @@
       // 💬 WhatsApp header: stato dipende dalla filiale scelta
       updateClientWaButton();
       // شريط تنقل العميل (بدون "خروج" — صار في قائمة ⚙️)
-      const tabs=[{k:'home',ico:ic('home',22,2.2),l:lang==='ar'?'الرئيسية':'Home'},{k:'shop',ico:ic('bag',22,2.2),l:t('shopNow')},{k:'orders',ico:ic('receipt',22,2.2),l:t('myOrders')},{k:'points',ico:ic('gem',22,2.2),l:t('myPoints')},{k:'mydata',ico:ic('user',22,2.2),l:t('myData')}];
+      const tabs=[{k:'home',ico:ic('home',22,2.2),l:L('الرئيسية','Home','Accueil','Home')},{k:'shop',ico:ic('bag',22,2.2),l:t('shopNow')},{k:'orders',ico:ic('receipt',22,2.2),l:t('myOrders')},{k:'points',ico:ic('gem',22,2.2),l:t('myPoints')},{k:'mydata',ico:ic('user',22,2.2),l:t('myData')}];
       $('client-nav').innerHTML=tabs.map(x=>`<button class="nav-btn ${x.k===clientTab?'active':''}" data-ctab="${x.k}"><span class="ico">${x.ico}</span><span class="lbl2">${x.l}</span></button>`).join('');
       document.querySelectorAll('[data-ctab]').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#client-nav .nav-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); clientTab=b.dataset.ctab; renderClientTab(); });
       if(!clientTab) clientTab='home';
@@ -12315,16 +12442,16 @@
       if(waNum){
         btn.disabled = false;
         const wbn = wa ? esc(lang==='ar'?wa.nameAr:wa.nameEn) : '';
-        btn.title = (lang==='ar'?'دردشة واتساب · ':'WhatsApp · ') + wbn;
+        btn.title = L('دردشة واتساب · ','WhatsApp · ','WhatsApp · ','WhatsApp · ') + wbn;
         btn.onclick = () => {
-          const msg = encodeURIComponent(lang==='ar' ? `مرحباً، أنا ${clientProfile.name||''}` : `Hello, I'm ${clientProfile.name||''}`);
+          const msg = encodeURIComponent(L(`مرحباً، أنا ${clientProfile.name||''}`,`Hello, I'm ${clientProfile.name||''}`,`Bonjour, je suis ${clientProfile.name||''}`,`Ciao, sono ${clientProfile.name||''}`));
           window.open(`https://wa.me/${waNum}?text=${msg}`, '_blank', 'noopener');
         };
       } else {
         btn.disabled = true;
-        btn.title = lang==='ar' ? 'اختر فرعاً أولاً' : 'Choose a branch first';
+        btn.title = L('اختر فرعاً أولاً','Choose a branch first','Choisissez d\'abord une succursale','Scegli prima una filiale');
         btn.onclick = () => {
-          toast(lang==='ar' ? 'اختر فرعاً أولاً من ☰' : 'Choose a branch first from ☰', true);
+          toast(L('اختر فرعاً أولاً من ☰','Choose a branch first from ☰','Choisissez d\'abord une succursale dans ☰','Scegli prima una filiale da ☰'), true);
         };
       }
     }
@@ -12365,10 +12492,10 @@
       // 🆕 v2.7.4 — Banner sospeso premium (ic('pause') invece di ⏸️)
       const suspendedBanner = (clientProfile&&clientProfile.suspended) ? `<div class="card" style="display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(192,72,72,0.10);border:1px solid rgba(192,72,72,0.35);color:var(--red);font-weight:700;font-size:13px;margin-bottom:12px;padding:13px 14px;"><span style="display:inline-flex;color:var(--red);">${ic('pause',18,2.2)}</span><span>${t('accountSuspended')}</span></div>` : '';
       // Etichette
-      const chooseTitle = lang==='ar' ? 'اختر فرعك' : 'Choose your branch';
-      const chooseHint  = lang==='ar' ? 'اختر فرعاً لتصفّح المنتجات والطلب' : 'Select a branch to browse products and order';
-      const shoppingFrom= lang==='ar' ? 'تتسوّق من' : 'Shopping from';
-      const changeLbl   = lang==='ar' ? 'تغيير' : 'Change';
+      const chooseTitle = L('اختر فرعك','Choose your branch','Choisissez votre succursale','Scegli la tua filiale');
+      const chooseHint  = L('اختر فرعاً لتصفّح المنتجات والطلب','Select a branch to browse products and order','Sélectionnez une succursale pour parcourir les produits et commander','Seleziona una filiale per sfogliare i prodotti e ordinare');
+      const shoppingFrom= L('تتسوّق من','Shopping from','Vous commandez depuis','Stai ordinando da');
+      const changeLbl   = L('تغيير','Change','Changer','Cambia');
 
       // === Nessuna filiale scelta: invito elegante (illustrazione SVG forest+gold) ===
       if(!clientBranchId){
@@ -12421,9 +12548,9 @@
           if(!_reItems.length){ rc.innerHTML=''; return; }
           const _names = _reItems.map(i=>i.name).filter(Boolean).join(lang==='ar'?'، ':', ');
           const _totQty = _reItems.reduce((s,i)=>s+i.qty,0);
-          const _title = lang==='ar'?'اطلب من جديد':'Order again';
-          const _sub = lang==='ar'?('آخر طلب · '+fmt(_totQty)+' صنف'):('Last order · '+fmt(_totQty)+' items');
-          const _btnLbl = lang==='ar'?'اطلبها مرة أخرى':'Reorder';
+          const _title = L('اطلب من جديد','Order again','Commander à nouveau','Ordina di nuovo');
+          const _sub = L('آخر طلب · '+fmt(_totQty)+' صنف','Last order · '+fmt(_totQty)+' items','Dernière commande · '+fmt(_totQty)+' articles','Ultimo ordine · '+fmt(_totQty)+' articoli');
+          const _btnLbl = L('اطلبها مرة أخرى','Reorder','Recommander','Riordina');
           rc.innerHTML = `<div style="background:linear-gradient(135deg,#ffffff,var(--ivory));border:1px solid var(--gold);border-radius:14px;padding:14px 15px;box-shadow:0 3px 12px rgba(201,168,76,0.15);">
               <div style="display:flex;align-items:center;gap:11px;">
                 <div style="width:40px;height:40px;border-radius:11px;background:rgba(201,168,76,0.16);color:var(--gold);display:flex;align-items:center;justify-content:center;flex:0 0 auto;border:1px solid rgba(201,168,76,0.3);">${ic('refresh',20,2.2)}</div>
@@ -12493,7 +12620,7 @@
               const c = (categories||[]).find(x => x.id===cid);
               return c ? (lang==='ar'?c.nameAr:c.nameEn) : null;
             }).filter(Boolean).join(' · ');
-            const endTxt = o.timeEnd ? `${lang==='ar'?'حتى':'until'} ${toArDigits(o.timeEnd)}` : '';
+            const endTxt = o.timeEnd ? `${L('حتى','until','jusqu\'à','fino alle')} ${toArDigits(o.timeEnd)}` : '';
             return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
               <span style="flex:0 0 auto;font-size:18px;">☕</span>
               <div style="flex:1;min-width:0;">
@@ -12504,11 +12631,11 @@
           }).join('<div style="height:1px;background:rgba(255,255,255,0.18);margin:2px 0;"></div>');
           hhBanner = `<div id="shop-hh-banner" style="background:linear-gradient(135deg,var(--amber),#B57820);color:#fff;border-radius:13px;padding:12px 14px 12px 14px;margin-bottom:12px;box-shadow:0 4px 14px rgba(216,142,42,0.32);cursor:pointer;border:1px solid rgba(255,255,255,0.18);">
             ${hhLines}
-            <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.22);font-size:11px;font-weight:700;color:#fff;opacity:0.95;">${ic('sparkle',12,2.2)}<span>${lang==='ar'?'اضغط لعرض كل منتجات الـ Happy Hour':'Tap to see all Happy Hour products'}</span></div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.22);font-size:11px;font-weight:700;color:#fff;opacity:0.95;">${ic('sparkle',12,2.2)}<span>${L('اضغط لعرض كل منتجات الـ Happy Hour','Tap to see all Happy Hour products','Appuyez pour voir tous les produits Happy Hour','Tocca per vedere tutti i prodotti Happy Hour')}</span></div>
           </div>`;
         }
         // === Search input + chip filtri dinamiche ===
-        const searchPlaceholder = lang==='ar' ? 'ابحث عن منتج…' : 'Search products…';
+        const searchPlaceholder = L('ابحث عن منتج…','Search products…','Rechercher un produit…','Cerca un prodotto…');
         const searchBar = `<div style="position:relative;margin-bottom:10px;">
           <span style="position:absolute;top:50%;${lang==='ar'?'right':'left'}:13px;transform:translateY(-50%);display:inline-flex;color:rgba(26,26,26,0.42);pointer-events:none;">${ic('search',16,2.2)}</span>
           <input class="input" id="shop-search" autocomplete="off" placeholder="${searchPlaceholder}" style="padding-${lang==='ar'?'right':'left'}:40px;font-size:13.5px;height:42px;border-radius:11px;">
@@ -12516,11 +12643,11 @@
         </div>`;
         // Chip definizioni: sempre All + virtuali (se hanno count>0) + categorie ordinarie con count>0
         const chipDefs = [
-          { id:'all',   lbl:(lang==='ar'?'الكل':'All'),           n:countAll, col:'var(--forest)', bg:'var(--forest)', isStatic:true }
+          { id:'all',   lbl:(L('الكل','All','Tout','Tutto')),           n:countAll, col:'var(--forest)', bg:'var(--forest)', isStatic:true }
         ];
-        if(countFav>0)   chipDefs.push({ id:'fav',   lbl:(lang==='ar'?'المفضلة':'Favorites'),  n:countFav,   col:'var(--red)',   bg:'var(--red)',   ico:ic('heartFilled',12,2) });
+        if(countFav>0)   chipDefs.push({ id:'fav',   lbl:(L('المفضلة','Favorites','Favoris','Preferiti')),  n:countFav,   col:'var(--red)',   bg:'var(--red)',   ico:ic('heartFilled',12,2) });
         if(countHH>0)    chipDefs.push({ id:'hh',    lbl:t('happyHour'),                       n:countHH,    col:'var(--amber)', bg:'var(--amber)', ico:'☕' });
-        if(countSales>0) chipDefs.push({ id:'sales', lbl:(lang==='ar'?'عروض':'Sales'),          n:countSales, col:'var(--gold)',  bg:'var(--gold)',  ico:ic('sparkle',12,2.2) });
+        if(countSales>0) chipDefs.push({ id:'sales', lbl:(L('عروض','Sales','Promos','Offerte')),          n:countSales, col:'var(--gold)',  bg:'var(--gold)',  ico:ic('sparkle',12,2.2) });
         visibleCats.forEach(c => {
           chipDefs.push({ id:c.id, lbl:(lang==='ar'?c.nameAr:c.nameEn)||'?', n:catCounts[c.id], col:'var(--forest)', bg:'var(--forest)' });
         });
@@ -12537,8 +12664,8 @@
           const f = window._shopFilter;
           const isSearch = !!f.q;
           const txt = isSearch
-            ? (lang==='ar'?'مفيش منتج بالاسم ده':'No product matches your search')
-            : (lang==='ar'?'مفيش منتجات في الفلتر ده':'No products in this filter');
+            ? (L('مفيش منتج بالاسم ده','No product matches your search','Aucun produit ne correspond à votre recherche','Nessun prodotto corrisponde alla ricerca'))
+            : (L('مفيش منتجات في الفلتر ده','No products in this filter','Aucun produit dans ce filtre','Nessun prodotto in questo filtro'));
           return `<div class="empty" style="padding:36px 16px;text-align:center;color:rgba(26,26,26,0.55);font-size:13px;">${esc(txt)}</div>`;
         };
         const _paintGrid = () => {
@@ -12989,13 +13116,13 @@
         if(!all.length){ c.innerHTML=`<div class="empty" style="padding:50px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(31,58,46,0.06),rgba(201,168,76,0.10));color:rgba(31,58,46,0.4);display:flex;align-items:center;justify-content:center;">${ic('receipt',40,1.6)}</div><span style="font-size:13.5px;color:rgba(26,26,26,0.55);font-weight:600;">${t('myOrders')}</span></div>`; return; }
 
         // Etichette
-        const onlineLbl   = lang==='ar' ? 'طلب أونلاين' : 'Online order';
-        const instoreLbl  = lang==='ar' ? 'شراء من الفرع' : 'In-store purchase';
-        const atCounterMsg= lang==='ar' ? 'تم الشراء مباشرة من الكاشير في الفرع' : 'Purchased directly at the counter in the branch';
-        const earnedLbl   = lang==='ar' ? 'نقطة مكتسبة' : 'points earned';
-        const usedLbl     = lang==='ar' ? 'نقطة مستخدمة' : 'points used';
-        const reversedLbl = lang==='ar' ? 'نقاط مستردة (إلغاء)' : 'points reversed';
-        const receiptLbl  = lang==='ar' ? 'إيصال' : 'Receipt';
+        const onlineLbl   = L('طلب أونلاين','Online order','Commande en ligne','Ordine online');
+        const instoreLbl  = L('شراء من الفرع','In-store purchase','Achat en succursale','Acquisto in filiale');
+        const atCounterMsg= L('تم الشراء مباشرة من الكاشير في الفرع','Purchased directly at the counter in the branch','Acheté directement au comptoir en succursale','Acquistato direttamente al banco in filiale');
+        const earnedLbl   = L('نقطة مكتسبة','points earned','points gagnés','punti guadagnati');
+        const usedLbl     = L('نقطة مستخدمة','points used','points utilisés','punti usati');
+        const reversedLbl = L('نقاط مستردة (إلغاء)','points reversed','points remboursés','punti rimborsati');
+        const receiptLbl  = L('إيصال','Receipt','Reçu','Ricevuta');
         // 🆕 v2.7.4 — Timeline stati ONLINE con icone SVG ic() invece di emoji
         const steps=['pending','preparing','ready','paid'];
         const stepLabel={pending:t('orderStatusPending'),preparing:t('orderStatusPreparing'),ready:t('orderStatusReady'),paid:t('orderStatusPaid')};
@@ -13057,17 +13184,17 @@
               if(ahead>0){
                 stateBanner=`<div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(217,164,65,0.12),rgba(217,164,65,0.04));border:1px solid rgba(217,164,65,0.3);border-radius:12px;padding:12px 14px;margin:10px 0;">
                   <div style="width:46px;height:46px;border-radius:50%;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:0 2px 8px rgba(217,164,65,0.35);"><span class="num" style="font-size:21px;font-weight:800;">${fmt(ahead)}</span></div>
-                  <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:14px;color:#9a7d2e;">${lang==='ar'?(ahead===1?'طلب واحد قبل دورك':'طلبات قبل دورك'):(ahead===1?'order before you':'orders before you')}</div><div style="font-size:11.5px;color:rgba(26,26,26,0.6);margin-top:2px;">${lang==='ar'?'كل ما يخلص طلب بتقرب خطوة':'You move up as each order finishes'}</div></div>
+                  <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:14px;color:#9a7d2e;">${L(ahead===1?'طلب واحد قبل دورك':'طلبات قبل دورك',ahead===1?'order before you':'orders before you',ahead===1?'commande avant vous':'commandes avant vous',ahead===1?'ordine prima di te':'ordini prima di te')}</div><div style="font-size:11.5px;color:rgba(26,26,26,0.6);margin-top:2px;">${L('كل ما يخلص طلب بتقرب خطوة','You move up as each order finishes','Vous avancez à chaque commande terminée','Avanzi a ogni ordine completato')}</div></div>
                 </div>`;
               } else if(ahead===0){
-                stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--forest-dark);border-radius:12px;padding:13px 15px;margin:10px 0;box-shadow:0 3px 12px rgba(201,168,76,0.3);"><span style="display:inline-flex;flex:0 0 auto;">${ic('sparkle',22,2.2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:15px;">${lang==='ar'?'أنت التالي!':'You are next!'}</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px;">${lang==='ar'?'هنبدأ في طلبك حالاً':'We start your order any moment'}</div></div></div>`;
+                stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:var(--forest-dark);border-radius:12px;padding:13px 15px;margin:10px 0;box-shadow:0 3px 12px rgba(201,168,76,0.3);"><span style="display:inline-flex;flex:0 0 auto;">${ic('sparkle',22,2.2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:15px;">${L('أنت التالي!','You are next!','Vous êtes le prochain !','Sei il prossimo!')}</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px;">${L('هنبدأ في طلبك حالاً','We start your order any moment','Nous commençons votre commande d\'un instant à l\'autre','Iniziamo il tuo ordine a momenti')}</div></div></div>`;
               } else {
-                stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(217,164,65,0.12),rgba(217,164,65,0.04));border:1px solid rgba(217,164,65,0.3);border-radius:12px;padding:12px 14px;margin:10px 0;"><span style="display:inline-flex;flex:0 0 auto;color:var(--amber);">${ic('clock',20,2.2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:14px;color:#9a7d2e;">${lang==='ar'?'طلبك في الطابور':'Your order is in the queue'}</div><div style="font-size:11.5px;color:rgba(26,26,26,0.6);margin-top:2px;">${lang==='ar'?'هنبدأ تحضيره قريباً':'We will start it soon'}</div></div></div>`;
+                stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(217,164,65,0.12),rgba(217,164,65,0.04));border:1px solid rgba(217,164,65,0.3);border-radius:12px;padding:12px 14px;margin:10px 0;"><span style="display:inline-flex;flex:0 0 auto;color:var(--amber);">${ic('clock',20,2.2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:14px;color:#9a7d2e;">${L('طلبك في الطابور','Your order is in the queue','Votre commande est dans la file','Il tuo ordine è in coda')}</div><div style="font-size:11.5px;color:rgba(26,26,26,0.6);margin-top:2px;">${L('هنبدأ تحضيره قريباً','We will start it soon','Nous la commençons bientôt','La iniziamo a breve')}</div></div></div>`;
               }
             } else if(o.status==='preparing'){
-              stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,var(--forest),var(--forest-dark));color:#fff;border-radius:12px;padding:13px 15px;margin:10px 0;box-shadow:0 3px 12px rgba(31,58,46,0.25);"><span style="display:inline-flex;flex:0 0 auto;color:var(--gold);">${ic('chef',22,2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:15px;">${lang==='ar'?'جاري تحضير طلبك الآن':'Preparing your order now'}</div><div style="font-size:11.5px;opacity:0.8;margin-top:2px;">${lang==='ar'?'لحظات ويكون جاهز':'Almost ready'}</div></div></div>`;
+              stateBanner=`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,var(--forest),var(--forest-dark));color:#fff;border-radius:12px;padding:13px 15px;margin:10px 0;box-shadow:0 3px 12px rgba(31,58,46,0.25);"><span style="display:inline-flex;flex:0 0 auto;color:var(--gold);">${ic('chef',22,2)}</span><div style="flex:1;"><div style="font-weight:800;font-size:15px;">${L('جاري تحضير طلبك الآن','Preparing your order now','Nous préparons votre commande','Stiamo preparando il tuo ordine')}</div><div style="font-size:11.5px;opacity:0.8;margin-top:2px;">${L('لحظات ويكون جاهز','Almost ready','Presque prête','Quasi pronto')}</div></div></div>`;
             } else if(o.status==='ready'){
-              stateBanner=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#fff;padding:12px;border-radius:10px;margin:10px 0;font-weight:800;font-size:14px;box-shadow:0 3px 12px rgba(201,168,76,0.3);">${ic('check',18,2.6)}<span>${lang==='ar'?'طلبك جاهز للاستلام':'Your order is ready for pickup'}</span></div>`;
+              stateBanner=`<div style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#fff;padding:12px;border-radius:10px;margin:10px 0;font-weight:800;font-size:14px;box-shadow:0 3px 12px rgba(201,168,76,0.3);">${ic('check',18,2.6)}<span>${L('طلبك جاهز للاستلام','Your order is ready for pickup','Votre commande est prête à être récupérée','Il tuo ordine è pronto per il ritiro')}</span></div>`;
             }
           }
 
@@ -13117,7 +13244,7 @@
       const needed = Math.max(0, MIN_POINTS_REDEEM - pts);
       const progressPct = Math.min(100, Math.round((pts/MIN_POINTS_REDEEM)*100));
       // كرت الرصيد: شكل مختلف لو فوق العتبة أو تحتها
-      const ptsLbl = lang==='ar' ? 'نقطة' : 'pts';
+      const ptsLbl = L('نقطة','pts','pts','pts');
       let html='';
       if(isReady){
         html+=`<div class="card" style="background:linear-gradient(135deg,var(--gold),#E8C76A);color:#fff;text-align:center;box-shadow:0 6px 20px rgba(201,168,76,0.35);border:none;">
@@ -13162,10 +13289,10 @@
               <span>${t('discountPct')}</span><span class="num" style="font-weight:700;color:var(--gold);">${fmt2(pct)}%</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(26,26,26,0.6);margin-bottom:3px;">
-              <span>${t('inMoney')}</span><span class="num" style="font-weight:700;color:var(--gold);">${fmt(egpPerPoint)} ${t('currency')} = 1 ${lang==='ar'?'نقطة':'pt'}</span>
+              <span>${t('inMoney')}</span><span class="num" style="font-weight:700;color:var(--gold);">${fmt(egpPerPoint)} ${t('currency')} = 1 ${L('نقطة','pt','pt','pt')}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(26,26,26,0.6);">
-              <span>${t('pointValue')}</span><span class="num" style="font-weight:700;color:var(--gold);">1 ${lang==='ar'?'نقطة':'pt'} = 1 ${t('currency')}</span>
+              <span>${t('pointValue')}</span><span class="num" style="font-weight:700;color:var(--gold);">1 ${L('نقطة','pt','pt','pt')} = 1 ${t('currency')}</span>
             </div>
           </div>`;
         }).join('');
@@ -13188,10 +13315,10 @@
               <span>${t('discountPct')}</span><span class="num" style="font-weight:700;color:var(--forest);">${fmt2(pct)}%</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(26,26,26,0.6);margin-bottom:3px;">
-              <span>${t('inMoney')}</span><span class="num" style="font-weight:700;color:var(--forest);">${fmt(egpPerPoint)} ${t('currency')} = 1 ${lang==='ar'?'نقطة':'pt'}</span>
+              <span>${t('inMoney')}</span><span class="num" style="font-weight:700;color:var(--forest);">${fmt(egpPerPoint)} ${t('currency')} = 1 ${L('نقطة','pt','pt','pt')}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(26,26,26,0.6);">
-              <span>${t('pointValue')}</span><span class="num" style="font-weight:700;color:var(--forest);">1 ${lang==='ar'?'نقطة':'pt'} = 1 ${t('currency')}</span>
+              <span>${t('pointValue')}</span><span class="num" style="font-weight:700;color:var(--forest);">1 ${L('نقطة','pt','pt','pt')} = 1 ${t('currency')}</span>
             </div>
           </div>`;
         }).join('');
@@ -13252,21 +13379,21 @@
           const now2 = new Date();
           const daysLeft = new Date(now2.getFullYear(), now2.getMonth()+1, 0).getDate() - now2.getDate();
           const medal = ['#C9A84C','#BFC6CC','#CD7F32']; // oro / argento / bronzo
-          const firstName = (s)=>{ const f=String(s||'').split(' ')[0]; return f || (lang==='ar'?'عميل':'guest'); };
-          const visitsLbl = (n)=> lang==='ar' ? (fmt(n)+' زيارة') : (fmt(n)+(n===1?' visit':' visits'));
-          const title = lang==='ar'?'تحدي الشهر':'Monthly Challenge';
-          const cdLbl = lang==='ar' ? ('باقي '+fmt(daysLeft)+' يوم') : (fmt(daysLeft)+'d left');
-          const prizeLbl = lang==='ar' ? 'جوائز لأصحاب المراكز الأولى — تُعلن في البكاريا' : 'Prizes for the top spots — announced on the board';
+          const firstName = (s)=>{ const f=String(s||'').split(' ')[0]; return f || (L('عميل','guest','client','cliente')); };
+          const visitsLbl = (n)=> L(fmt(n)+' زيارة', fmt(n)+(n===1?' visit':' visits'), fmt(n)+(n===1?' visite':' visites'), fmt(n)+(n===1?' visita':' visite'));
+          const title = L('تحدي الشهر','Monthly Challenge','Défi du mois','Sfida del mese');
+          const cdLbl = L('باقي '+fmt(daysLeft)+' يوم', fmt(daysLeft)+'d left', fmt(daysLeft)+'j restants', fmt(daysLeft)+'g rimasti');
+          const prizeLbl = L('جوائز لأصحاب المراكز الأولى — تُعلن في البكاريا','Prizes for the top spots — announced on the board','Des prix pour les meilleurs — annoncés sur le tableau','Premi per i primi posti — annunciati sulla lavagna');
           // Righe podio
           let rowsHtml = '';
           if(!top3.length){
-            rowsHtml = `<div style="text-align:center;padding:14px 8px;font-size:13px;opacity:0.85;">${lang==='ar'?'كن أول من يبدأ المنافسة هذا الشهر!':'Be the first to start this month!'}</div>`;
+            rowsHtml = `<div style="text-align:center;padding:14px 8px;font-size:13px;opacity:0.85;">${L('كن أول من يبدأ المنافسة هذا الشهر!','Be the first to start this month!','Soyez le premier à démarrer ce mois-ci !','Sii il primo a iniziare questo mese!')}</div>`;
           } else {
             rowsHtml = top3.map((e,i)=>{
               const me = e.id===clientProfile.id;
               return `<div style="display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:11px;${me?'background:rgba(201,168,76,0.18);border:1px solid var(--gold);':'background:rgba(255,255,255,0.06);'}">
                 <div style="width:30px;height:30px;border-radius:50%;background:${medal[i]};color:#1a1a1a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:0 0 auto;box-shadow:0 0 10px ${medal[i]}66;">${fmt(i+1)}</div>
-                <div style="flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(firstName(e.nm))}${me?` <span style="font-size:11px;opacity:0.8;font-weight:600;">(${lang==='ar'?'أنت':'you'})</span>`:''}</div>
+                <div style="flex:1;min-width:0;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(firstName(e.nm))}${me?` <span style="font-size:11px;opacity:0.8;font-weight:600;">(${L('أنت','you','vous','tu')})</span>`:''}</div>
                 <div class="num" style="font-weight:800;font-size:14px;color:var(--gold);flex:0 0 auto;">${visitsLbl(e.n)}</div>
               </div>`;
             }).join('');
@@ -13278,16 +13405,16 @@
             const toPodium = Math.max(1, third - myN + 1);
             mineHtml = `<div style="margin-top:10px;padding:11px 13px;border-radius:11px;background:rgba(255,255,255,0.10);border:1px dashed rgba(255,255,255,0.3);">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                  <span style="font-size:13px;font-weight:700;">${lang==='ar'?'مركزك الحالي':'Your rank'}</span>
+                  <span style="font-size:13px;font-weight:700;">${L('مركزك الحالي','Your rank','Votre rang','La tua posizione')}</span>
                   <span style="font-weight:800;color:var(--gold);font-size:15px;" class="num">${fmt(myRank)}</span>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;font-size:12px;opacity:0.92;">
                   <span>${visitsLbl(myN)}</span>
-                  <span style="color:var(--gold);font-weight:700;">${lang==='ar'?('باقي '+fmt(toPodium)+' للمركز الثالث'):(fmt(toPodium)+' to reach 3rd')}</span>
+                  <span style="color:var(--gold);font-weight:700;">${L('باقي '+fmt(toPodium)+' للمركز الثالث', fmt(toPodium)+' to reach 3rd', fmt(toPodium)+' pour le 3e', fmt(toPodium)+' per il 3°')}</span>
                 </div>
               </div>`;
           } else if(myRank===0){
-            mineHtml = `<div style="margin-top:10px;padding:11px 13px;border-radius:11px;background:rgba(255,255,255,0.10);border:1px dashed rgba(255,255,255,0.3);text-align:center;font-size:12.5px;font-weight:600;opacity:0.92;">${lang==='ar'?'لسه ما عندكش زيارات الشهر ده — أول زيارة تدخّلك المنافسة!':'No visits yet this month — your first visit puts you in the race!'}</div>`;
+            mineHtml = `<div style="margin-top:10px;padding:11px 13px;border-radius:11px;background:rgba(255,255,255,0.10);border:1px dashed rgba(255,255,255,0.3);text-align:center;font-size:12.5px;font-weight:600;opacity:0.92;">${L('لسه ما عندكش زيارات الشهر ده — أول زيارة تدخّلك المنافسة!','No visits yet this month — your first visit puts you in the race!','Aucune visite ce mois-ci — votre première visite vous met dans la course !','Nessuna visita questo mese — la prima visita ti mette in gara!')}</div>`;
           }
           mc.innerHTML = `<div class="card" style="background:linear-gradient(135deg,var(--forest),var(--forest-dark));color:var(--ivory);border:none;box-shadow:0 6px 20px rgba(31,58,46,0.28);position:relative;overflow:hidden;">
               <div style="position:absolute;inset:0;background:radial-gradient(circle at 88% -10%,rgba(201,168,76,0.16),transparent 55%);pointer-events:none;"></div>
@@ -13318,10 +13445,10 @@
         const lastEarn = arr.find(r=>r.type==='earn');
         const statsEl = $('pts-stats');
         if(statsEl){
-          const earnedLbl = lang==='ar'?'إجمالي المكتسب':'Total earned';
-          const spentLbl = lang==='ar'?'إجمالي المُستخدم':'Total used';
-          const txLbl = lang==='ar'?'عملية':'transactions';
-          const lastLbl = lang==='ar'?'آخر مكافأة':'Last reward';
+          const earnedLbl = L('إجمالي المكتسب','Total earned','Total gagné','Totale guadagnato');
+          const spentLbl = L('إجمالي المُستخدم','Total used','Total utilisé','Totale usato');
+          const txLbl = L('عملية','transactions','opérations','operazioni');
+          const lastLbl = L('آخر مكافأة','Last reward','Dernière récompense','Ultimo premio');
           statsEl.innerHTML = `
             <div style="background:#fff;border:1px solid var(--ivory-dark);border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:9px;">
               <div style="width:34px;height:34px;border-radius:10px;background:rgba(61,115,85,0.13);color:var(--green);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">${ic('plus',17,2.4)}</div>
@@ -13358,10 +13485,10 @@
             lbl=t('spent'); icoSvg=ic('gem',13,2);
             pillBg='rgba(201,168,76,0.16)'; pillFg='var(--gold)';
           } else if(r.type==='void_refund'){
-            lbl=lang==='ar'?'استرداد (فاتورة ملغية)':'Returned (cancelled)'; icoSvg=ic('refresh',13,2.2);
+            lbl=L('استرداد (فاتورة ملغية)','Returned (cancelled)','Remboursé (annulé)','Rimborsato (annullato)'); icoSvg=ic('refresh',13,2.2);
             pillBg='rgba(61,115,85,0.10)'; pillFg='var(--green)';
           } else if(r.type==='void_revoke'){
-            lbl=lang==='ar'?'سحب (فاتورة ملغية)':'Reversed (cancelled)'; icoSvg=ic('x',13,2.4);
+            lbl=L('سحب (فاتورة ملغية)','Reversed (cancelled)','Retiré (annulé)','Ritirato (annullato)'); icoSvg=ic('x',13,2.4);
             pillBg='rgba(192,72,72,0.10)'; pillFg='var(--red)';
           } else {
             lbl=r.type; icoSvg=ic('gem',13,2);
@@ -13388,19 +13515,21 @@
           const d = new Date(cp.createdAt);
           const monthsAr = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
           const monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          const month = lang==='ar' ? monthsAr[d.getMonth()] : monthsEn[d.getMonth()];
+          const monthsFr = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+          const monthsIt = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+          const month = L(monthsAr[d.getMonth()], monthsEn[d.getMonth()], monthsFr[d.getMonth()], monthsIt[d.getMonth()]);
           const year = lang==='ar' ? toArDigits(String(d.getFullYear())) : String(d.getFullYear());
-          return (lang==='ar' ? 'عميل Le Coin منذ ' : 'Le Coin member since ') + month + ' ' + year;
-        }catch(e){ return lang==='ar' ? 'عميل Le Coin' : 'Le Coin member'; }
+          return (L('عميل Le Coin منذ ','Le Coin member since ','Membre Le Coin depuis ','Membro Le Coin da ')) + month + ' ' + year;
+        }catch(e){ return L('عميل Le Coin','Le Coin member','Membre Le Coin','Membro Le Coin'); }
       })();
       // Etichette tradotte
-      const personalLbl   = lang==='ar' ? 'البيانات الشخصية' : 'Personal data';
-      const accountLbl    = lang==='ar' ? 'الحساب' : 'Account';
-      const cardLbl       = lang==='ar' ? 'بطاقة الولاء' : 'Loyalty card';
-      const cardHint      = lang==='ar' ? 'اعرض الـ QR للكاشير عشان يبدأ طلبك أو يصرف نقاطك' : 'Show this QR to the cashier to start an order or redeem points';
-      const pointLbl      = lang==='ar' ? 'نقطة' : 'points';
-      const changePhotoLbl= lang==='ar' ? 'تغيير الصورة' : 'Change photo';
-      const pwdMinHint    = lang==='ar' ? '٦ حروف على الأقل' : 'At least 6 characters';
+      const personalLbl   = L('البيانات الشخصية','Personal data','Données personnelles','Dati personali');
+      const accountLbl    = L('الحساب','Account','Compte','Account');
+      const cardLbl       = L('بطاقة الولاء','Loyalty card','Carte de fidélité','Carta fedeltà');
+      const cardHint      = L('اعرض الـ QR للكاشير عشان يبدأ طلبك أو يصرف نقاطك','Show this QR to the cashier to start an order or redeem points','Montrez ce QR au caissier pour démarrer une commande ou utiliser vos points','Mostra questo QR al cassiere per avviare un ordine o usare i punti');
+      const pointLbl      = L('نقطة','points','points','punti');
+      const changePhotoLbl= L('تغيير الصورة','Change photo','Changer la photo','Cambia foto');
+      const pwdMinHint    = L('٦ حروف على الأقل','At least 6 characters','Au moins 6 caractères','Almeno 6 caratteri');
       const ptsCanUse     = pts >= 50;
       // Hint sotto pillola punti — esistono già le traduzioni pointsCanUseNow / pointsNeedMore / pointsToUnlock
       const ptsHint = ptsCanUse
@@ -13454,6 +13583,17 @@
           <button class="btn-forest btn-wide" id="md-save" style="padding:13px;gap:8px;">${ic('check',16,2.4)}<span>${t('updateMyData')}</span></button>
         </div>
 
+        <!-- 🌐 CARD LINGUA (v3.1.0) -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;align-items:center;gap:9px;padding-bottom:11px;border-bottom:1px solid var(--ivory-dark);margin-bottom:14px;">
+            <div style="width:32px;height:32px;border-radius:9px;background:rgba(201,168,76,0.12);color:var(--gold);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:800;font-size:14px;">${(CLIENT_LANGS.find(l=>l.code===lang)||CLIENT_LANGS[0]).code.toUpperCase()}</div>
+            <div style="font-size:13.5px;font-weight:800;color:var(--forest);letter-spacing:0.2px;">${t('languageTitle')}</div>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;">
+            ${CLIENT_LANGS.map(l=>`<button type="button" class="md-lang-opt" data-code="${l.code}" style="flex:1;min-width:70px;padding:11px 6px;border-radius:11px;border:1.5px solid ${l.code===lang?'var(--gold)':'rgba(31,58,46,0.15)'};background:${l.code===lang?'var(--ivory-dark)':'#fff'};color:var(--forest);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;">${l.code===lang?ic('check',15,2.6):''}${l.label}</button>`).join('')}
+          </div>
+        </div>
+
         <!-- 🔑 CARD PASSWORD -->
         <div class="card" style="padding:16px;">
           <div style="display:flex;align-items:center;gap:9px;padding-bottom:11px;border-bottom:1px solid var(--ivory-dark);margin-bottom:14px;">
@@ -13482,6 +13622,8 @@
       };
       // ---- QR card click ----
       $('md-qr-btn').onclick=showMyQR;
+      // ---- 🌐 Lingua (v3.1.0): cambio istantaneo + persistenza ----
+      document.querySelectorAll('.md-lang-opt').forEach(b=>{ b.onclick=()=>setLang(b.dataset.code); });
       // ---- Password ----
       $('md-pwd-save').onclick=()=>changeMyPassword($('md-cur').value, $('md-new').value, $('md-new2').value, $('md-pwd-save'));
       // ---- Foto profilo: upload + compress + save su Firestore ----
@@ -13731,9 +13873,15 @@
       };
     }
     // ===== تسجيل عميل جديد =====
-    function openClientSignup(){
+    function openClientSignup(prefill){
+      prefill = prefill || {};
       $('sheet-root').innerHTML=`<div class="overlay centered" id="ov" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">
         <div class="sheet-head"><div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;border-radius:10px;background:rgba(31,58,46,0.08);color:var(--forest);display:flex;align-items:center;justify-content:center;flex:0 0 auto;">${ic('bag',18,2.2)}</div><div><div class="sheet-title">${t('clientSignup')}</div></div></div><button class="close-x" id="cx">×</button></div>
+        <div class="field"><label class="lbl">${t('languageTitle')}</label>
+          <div id="cs-lang" style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${CLIENT_LANGS.map(l=>`<button type="button" class="cs-lang-opt" data-code="${l.code}" style="flex:1;min-width:68px;padding:9px 6px;border-radius:10px;border:1.5px solid ${l.code===lang?'var(--gold)':'rgba(31,58,46,0.15)'};background:${l.code===lang?'var(--ivory-dark)':'#fff'};color:var(--forest);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">${l.label}</button>`).join('')}
+          </div>
+        </div>
         <div class="field"><label class="lbl">${t('clientName')} <span style="color:var(--red);">*</span></label><input class="input" id="cs-name"></div>
         <div class="field"><label class="lbl" style="display:inline-flex;align-items:center;gap:6px;">${ic('phone',13,2.2)}${t('phoneRequired')} <span style="color:var(--red);">*</span></label><input class="input num" id="cs-phone" type="tel" dir="ltr" placeholder="01xxxxxxxxx"></div>
         <div class="field"><label class="lbl">${t('emailOpt')}</label><input class="input num" id="cs-email" type="email" dir="ltr"></div>
@@ -13743,6 +13891,23 @@
         <div id="cs-err" style="color:var(--red);font-size:12px;text-align:center;margin-top:10px;min-height:14px;"></div>
       </div></div>`;
       $('cx').onclick=closeSheet;
+      // ripristina i valori già digitati (in caso di cambio lingua live)
+      $('cs-name').value = prefill.name || '';
+      $('cs-phone').value = prefill.phone || '';
+      $('cs-email').value = prefill.email || '';
+      $('cs-pass').value = prefill.pass || '';
+      // 🆕 v3.1.0 — selettore lingua in registrazione: cambia la lingua all'istante e preserva i dati
+      document.querySelectorAll('.cs-lang-opt').forEach(btn=>{
+        btn.onclick=()=>{
+          const cur={ name:$('cs-name').value, phone:$('cs-phone').value, email:$('cs-email').value, pass:$('cs-pass').value };
+          if(CLIENT_LANGS.some(l=>l.code===btn.dataset.code)){
+            lang = btn.dataset.code;
+            try{ localStorage.setItem('lecoin_lang', lang); }catch(e){}
+            applyLang(); refreshLoginLabels();
+          }
+          openClientSignup(cur);
+        };
+      });
       $('cs-save').onclick=async()=>{
         const name=$('cs-name').value.trim(), email=$('cs-email').value.trim(), phone=$('cs-phone').value.trim(), pass=$('cs-pass').value;
         const err=$('cs-err'); err.textContent='';
@@ -13765,7 +13930,7 @@
           let cred;
           try{ cred=await createUserWithEmailAndPassword(auth2,loginEmail,pass); }
           catch(e2){ console.error('Signup error:',e2); const code=e2.code||''; if(code.includes('email-already-in-use')) err.textContent=t('emailInUse'); else if(code.includes('invalid-email')) err.textContent=t('invalidEmail')+' ('+loginEmail+')'; else if(code.includes('weak-password')) err.textContent=t('weakPass'); else err.textContent=t('errorGen')+': '+code; b.disabled=false; b.innerHTML=ic('check',16,2.4)+t('clientSignup'); return; }
-          await setDoc(doc(db,'customers',cred.user.uid),{name,email:email||'',phone,loginEmail,points:0,createdAt:Date.now()});
+          await setDoc(doc(db,'customers',cred.user.uid),{name,email:email||'',phone,loginEmail,points:0,lang,createdAt:Date.now()});
           await signOut(auth2);
           closeSheet(); 
           toast(t('signupDone'));
@@ -13951,8 +14116,12 @@
           </div>
           <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardTitleField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(31,58,46,0.1);color:var(--forest);letter-spacing:0.3px;margin-inline-start:5px;">عربي</span></label><input class="input" id="chk-title-ar" dir="rtl" value="${esc(a.titleAr||a.title||'')}" maxlength="60" placeholder="${t('chalkboardTitlePlaceholder')}"></div>
           <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardTitleField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(31,58,46,0.1);color:var(--forest);letter-spacing:0.5px;margin-inline-start:5px;">EN</span></label><input class="input" id="chk-title-en" dir="ltr" value="${esc(a.titleEn||a.title||'')}" maxlength="60" placeholder="${t('chalkboardTitlePlaceholder')}"></div>
+          <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardTitleField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:0.5px;margin-inline-start:5px;">FR</span></label><input class="input" id="chk-title-fr" dir="ltr" value="${esc(a.titleFr||'')}" maxlength="60" placeholder="${t('chalkboardTitlePlaceholder')}"></div>
+          <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardTitleField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:0.5px;margin-inline-start:5px;">IT</span></label><input class="input" id="chk-title-it" dir="ltr" value="${esc(a.titleIt||'')}" maxlength="60" placeholder="${t('chalkboardTitlePlaceholder')}"></div>
           <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardMessageField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(31,58,46,0.1);color:var(--forest);letter-spacing:0.3px;margin-inline-start:5px;">عربي</span></label><textarea class="input" id="chk-message-ar" dir="rtl" rows="2" maxlength="200" style="resize:vertical;font-family:inherit;" placeholder="${t('chalkboardMessagePlaceholder')}">${esc(a.messageAr||a.message||'')}</textarea></div>
           <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardMessageField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(31,58,46,0.1);color:var(--forest);letter-spacing:0.5px;margin-inline-start:5px;">EN</span></label><textarea class="input" id="chk-message-en" dir="ltr" rows="2" maxlength="200" style="resize:vertical;font-family:inherit;" placeholder="${t('chalkboardMessagePlaceholder')}">${esc(a.messageEn||a.message||'')}</textarea></div>
+          <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardMessageField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:0.5px;margin-inline-start:5px;">FR</span></label><textarea class="input" id="chk-message-fr" dir="ltr" rows="2" maxlength="200" style="resize:vertical;font-family:inherit;" placeholder="${t('chalkboardMessagePlaceholder')}">${esc(a.messageFr||'')}</textarea></div>
+          <div class="field" style="margin:0;"><label class="lbl">${t('chalkboardMessageField')}<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:0.5px;margin-inline-start:5px;">IT</span></label><textarea class="input" id="chk-message-it" dir="ltr" rows="2" maxlength="200" style="resize:vertical;font-family:inherit;" placeholder="${t('chalkboardMessagePlaceholder')}">${esc(a.messageIt||'')}</textarea></div>
           <!-- 🆕 v2.7.0 Stage 5b — Filiali (multi-select, default vuoto) -->
           <div>
             <label class="lbl">${t('offerBranches')}</label>
@@ -13992,14 +14161,23 @@
       $('chk-save').onclick=async()=>{
         const titleAr=$('chk-title-ar').value.trim();
         const titleEn=$('chk-title-en').value.trim();
+        const titleFr=$('chk-title-fr').value.trim();
+        const titleIt=$('chk-title-it').value.trim();
         const messageAr=$('chk-message-ar').value.trim();
         const messageEn=$('chk-message-en').value.trim();
+        const messageFr=$('chk-message-fr').value.trim();
+        const messageIt=$('chk-message-it').value.trim();
         if(!titleAr && !titleEn){ toast(t('chalkboardTitleRequired'),true); return; }
-        // Fallback: se una lingua è vuota, usa l'altra
+        // Fallback: se una lingua è vuota, usa l'altra (AR/EN obbligatorie come base)
         const fTitleAr = titleAr || titleEn;
         const fTitleEn = titleEn || titleAr;
         const fMsgAr = messageAr || messageEn;
         const fMsgEn = messageEn || messageAr;
+        // FR/IT opzionali: se vuoti, restano vuoti (il display fa fallback su EN)
+        const fTitleFr = titleFr || '';
+        const fTitleIt = titleIt || '';
+        const fMsgFr = messageFr || '';
+        const fMsgIt = messageIt || '';
         // 🆕 Stage 5b — Verifica filiali (vuoto NON ammesso, come decisione Dottore)
         const allOn = $('chk-all').checked;
         let branchIds = [];
@@ -14013,7 +14191,7 @@
         const btn=$('chk-save'); btn.disabled=true; btn.textContent='...';
         try{
           // Campi bilingue + title/message legacy (per retrocompatibilità con vecchio codice)
-          const payload = { icon:pickedIcon, titleAr:fTitleAr, titleEn:fTitleEn, messageAr:fMsgAr, messageEn:fMsgEn, title:fTitleAr, message:fMsgAr, active, pinned, expiresAt:expTs, branchIds };
+          const payload = { icon:pickedIcon, titleAr:fTitleAr, titleEn:fTitleEn, titleFr:fTitleFr, titleIt:fTitleIt, messageAr:fMsgAr, messageEn:fMsgEn, messageFr:fMsgFr, messageIt:fMsgIt, title:fTitleAr, message:fMsgAr, active, pinned, expiresAt:expTs, branchIds };
           if(isEdit){
             await updateDoc(doc(db,'announcements',existing.id), payload);
             toast(t('chalkboardUpdated'));

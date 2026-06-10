@@ -57,6 +57,9 @@
       clientCategoryIds: []
     };
     function isProtectedAdmin(uid){ return uid === PROTECTED_ADMIN_UID; }
+    // 🆕 v3.6.11 — Ambiente produzione (corselli.it) vs test (GitHub/localhost). I test tools finanziari sono nascosti in produzione, riattivabili con gesto segreto (7 tap sul badge versione) salvato in localStorage.
+    function _isProdHost(){ try{ const h=(location.hostname||'').toLowerCase(); return h==='corselli.it' || h==='www.corselli.it'; }catch(e){ return false; } }
+    function _devToolsOn(){ try{ return !_isProdHost() || localStorage.getItem('lecoin_dev')==='1'; }catch(e){ return !_isProdHost(); } }
     function guardProtectedAdmin(uid, op){
       if(isProtectedAdmin(uid)){
         console.warn(`[PROTECTED_ADMIN_GUARD] BLOCKED operation "${op}" on protected admin UID=${uid}`);
@@ -142,7 +145,7 @@
         showVoided:'إظهار الملغاة',
         warehouse:'المخزن', receive:'استلام بضاعة', receiveQty:'الكمية المستلمة', newCost:'التكلفة الجديدة (للوحدة)',
         receiveDone:'تم الاستلام', currentQty:'الكمية الحالية', afterReceive:'بعد الاستلام', selectProduct:'— اختر المنتج —',
-        addToList:'أضف للقائمة', recvList:'قائمة الاستلام', loadAll:'استلام الكل', listEmpty:'القائمة فاضية', itemsN:'صنف', removeRow:'حذف', grandTotal:'إجمالي الفاتورة', recvPayHow:'طريقة دفع البضاعة', recvPayNow:'مدفوع الآن', recvOnCredit:'آجل (دين على المحل)', recvPayFrom:'يُدفع من', recvSourceCashier:'كاش موظف (عُهدة)', recvSelectCashier:'اختر الموظف صاحب العُهدة', recvRecalled:'تم سحب السطر للتعديل', recvRecallHint:'اضغط لسحب السطر وتعديله', recvNoCustody:'مفيش موظف عنده عُهدة دلوقتي', recvLoadingCustody:'بنحسب عُهد الموظفين...', recvOnlyManagers:'تسجيل فاتورة الشراء للأدمن والمدير فقط', recvBuyerSrc:'المُشتري / مصدر الدفع', purchaseNo:'رقم فاتورة الشراء', recvCreditNeedsSupplier:'الشراء الآجل لازم مورد محدّد — اختر المورد الأول', payableCreated:'تم تسجيل دين للمورد ✓', payablesTitle:'ديون الموردين', payablesEmpty:'مفيش ديون مفتوحة ✓ كله مدفوع', payablesTotalOpen:'إجمالي الديون المفتوحة', payOriginal:'أصل الدين', payPaidSoFar:'مدفوع', payRemaining:'المتبقي', payDebtBtn:'سداد', payTitle:'سداد دين للمورد', payAmount:'المبلغ المدفوع', payConfirm:'تأكيد السداد', payDone:'تم سداد الدين ✓', payTooMuch:'المبلغ أكبر من المتبقي', repPayables:'تقرير ديون الموردين', payDebtsCount:'عدد الديون', rstPayables:'ديون الموردين', rstPayablesWarn:'هيمسح كل ديون الموردين المفتوحة — تأكد من Backup', trePayables:'− ديون الموردين',
+        addToList:'أضف للقائمة', recvList:'قائمة الاستلام', loadAll:'استلام الكل', listEmpty:'القائمة فاضية', itemsN:'صنف', removeRow:'حذف', grandTotal:'إجمالي الفاتورة', recvPayHow:'طريقة دفع البضاعة', recvPayNow:'مدفوع الآن', recvOnCredit:'آجل (دين على المحل)', recvPayFrom:'يُدفع من', recvSourceCashier:'كاش موظف (عُهدة)', recvSelectCashier:'اختر الموظف صاحب العُهدة', recvRecalled:'تم سحب السطر للتعديل', recvRecallHint:'اضغط لسحب السطر وتعديله', recvNoCustody:'مفيش موظف عنده عُهدة دلوقتي', recvLoadingCustody:'بنحسب عُهد الموظفين...', recvOnlyManagers:'تسجيل فاتورة الشراء للأدمن والمدير فقط', recvBuyerSrc:'المُشتري / مصدر الدفع', purchaseNo:'رقم فاتورة الشراء', cancelInvoice:'إلغاء الفاتورة بالكامل', cancelInvoiceWarn:'سيتم: إرجاع الكميات من المخزن + إرجاع المبلغ للمصدر (أو إلغاء الدين) + تسجيل الإلغاء. هل أنت متأكد؟', invoiceCancelled:'تم إلغاء الفاتورة بالكامل', invoiceAlreadyCancelled:'هذه الفاتورة ملغاة بالفعل', cancelledLabel:'ملغاة', cancelledBy:'ألغاها', cancelledAt:'تاريخ الإلغاء', recvCreditNeedsSupplier:'الشراء الآجل لازم مورد محدّد — اختر المورد الأول', payableCreated:'تم تسجيل دين للمورد ✓', payablesTitle:'ديون الموردين', payablesEmpty:'مفيش ديون مفتوحة ✓ كله مدفوع', payablesTotalOpen:'إجمالي الديون المفتوحة', payOriginal:'أصل الدين', payPaidSoFar:'مدفوع', payRemaining:'المتبقي', payDebtBtn:'سداد', payTitle:'سداد دين للمورد', payAmount:'المبلغ المدفوع', payConfirm:'تأكيد السداد', payDone:'تم سداد الدين ✓', payTooMuch:'المبلغ أكبر من المتبقي', repPayables:'تقرير ديون الموردين', payDebtsCount:'عدد الديون', rstPayables:'ديون الموردين', rstPayablesWarn:'هيمسح كل ديون الموردين المفتوحة — تأكد من Backup', trePayables:'− ديون الموردين',
         scanBarcode:'امسح الباركود', scanHint:'وجّه الكاميرا ناحية الباركود', camNoAccess:'مفيش وصول للكاميرا — اسمح بالكاميرا أو اكتب الباركود يدوي', scanNewProd:'باركود جديد — سجّل المنتج', howManyAdd:'كام واحد تضيف للمخزن؟', takePhoto:'صوّر', fromGallery:'من الجاليري', scanFound:'لقيت المنتج', scanClose:'إغلاق',
         physInv:'الجرد الفعلي', countedQty:'الكمية المعدودة', systemQty:'كمية النظام', diff:'الفرق',
         surplus:'زيادة', shortage:'عجز', match:'مطابق', applyInv:'تطبيق الجرد', invApplied:'تم تطبيق الجرد',
@@ -250,7 +253,7 @@
         showVoided:'Show voided',
         warehouse:'Warehouse', receive:'Receive goods', receiveQty:'Quantity received', newCost:'New unit cost',
         receiveDone:'Goods received', currentQty:'Current qty', afterReceive:'After receiving', selectProduct:'— select product —',
-        addToList:'Add to list', recvList:'Receiving list', loadAll:'Receive all', listEmpty:'List is empty', itemsN:'items', removeRow:'Remove', grandTotal:'Invoice total', recvPayHow:'How are the goods paid?', recvPayNow:'Paid now', recvOnCredit:'On credit (shop owes supplier)', recvPayFrom:'Paid from', recvSourceCashier:'Staff custody', recvSelectCashier:'Select staff holding custody', recvRecalled:'Row pulled back for editing', recvRecallHint:'Tap to pull this row back and edit it', recvNoCustody:'No staff currently holds custody', recvLoadingCustody:'Computing staff custody...', recvOnlyManagers:'Only admin/manager can register a purchase invoice', recvBuyerSrc:'Buyer / payment source', purchaseNo:'Purchase invoice no.', recvCreditNeedsSupplier:'Credit purchase needs a specific supplier — choose one first', payableCreated:'Supplier debt recorded ✓', payablesTitle:'Supplier debts', payablesEmpty:'No open debts ✓ all paid', payablesTotalOpen:'Total open debts', payOriginal:'Original', payPaidSoFar:'Paid', payRemaining:'Remaining', payDebtBtn:'Pay', payTitle:'Pay supplier debt', payAmount:'Amount paid', payConfirm:'Confirm payment', payDone:'Debt paid ✓', payTooMuch:'Amount exceeds remaining', repPayables:'Supplier debts report', payDebtsCount:'Debts count', rstPayables:'Supplier payables', rstPayablesWarn:'Deletes all open supplier debts — back up first', trePayables:'− Supplier payables',
+        addToList:'Add to list', recvList:'Receiving list', loadAll:'Receive all', listEmpty:'List is empty', itemsN:'items', removeRow:'Remove', grandTotal:'Invoice total', recvPayHow:'How are the goods paid?', recvPayNow:'Paid now', recvOnCredit:'On credit (shop owes supplier)', recvPayFrom:'Paid from', recvSourceCashier:'Staff custody', recvSelectCashier:'Select staff holding custody', recvRecalled:'Row pulled back for editing', recvRecallHint:'Tap to pull this row back and edit it', recvNoCustody:'No staff currently holds custody', recvLoadingCustody:'Computing staff custody...', recvOnlyManagers:'Only admin/manager can register a purchase invoice', recvBuyerSrc:'Buyer / payment source', purchaseNo:'Purchase invoice no.', cancelInvoice:'Cancel entire invoice', cancelInvoiceWarn:'This will: return quantities from inventory + refund amount to source (or cancel supplier debt) + record the cancellation. Are you sure?', invoiceCancelled:'Invoice fully cancelled', invoiceAlreadyCancelled:'This invoice is already cancelled', cancelledLabel:'Cancelled', cancelledBy:'Cancelled by', cancelledAt:'Cancellation date', recvCreditNeedsSupplier:'Credit purchase needs a specific supplier — choose one first', payableCreated:'Supplier debt recorded ✓', payablesTitle:'Supplier debts', payablesEmpty:'No open debts ✓ all paid', payablesTotalOpen:'Total open debts', payOriginal:'Original', payPaidSoFar:'Paid', payRemaining:'Remaining', payDebtBtn:'Pay', payTitle:'Pay supplier debt', payAmount:'Amount paid', payConfirm:'Confirm payment', payDone:'Debt paid ✓', payTooMuch:'Amount exceeds remaining', repPayables:'Supplier debts report', payDebtsCount:'Debts count', rstPayables:'Supplier payables', rstPayablesWarn:'Deletes all open supplier debts — back up first', trePayables:'− Supplier payables',
         scanBarcode:'Scan barcode', scanHint:'Point the camera at the barcode', camNoAccess:'No camera access — allow camera or type the barcode manually', scanNewProd:'New barcode — register product', howManyAdd:'How many to add to stock?', takePhoto:'Take photo', fromGallery:'From gallery', scanFound:'Product found', scanClose:'Close',
         physInv:'Physical inventory', countedQty:'Counted qty', systemQty:'System qty', diff:'Difference',
         surplus:'Surplus', shortage:'Shortage', match:'Match', applyInv:'Apply inventory', invApplied:'Inventory applied',
@@ -2494,6 +2497,8 @@
       applyBranchLock();
       $('user-btn').onclick=openSettings;
       $('menu-btn')&&($('menu-btn').onclick=openMenu);
+      // 🆕 v3.6.11 — gesto segreto: 7 tap sul badge versione (solo admin protetto) attiva/disattiva i test tools in produzione
+      (function(){ const vb=$('ver-badge'); if(vb && !vb._wired){ vb._wired=true; let n=0,tmr=null; vb.onclick=()=>{ if(!user||!isProtectedAdmin(user.uid)) return; n++; clearTimeout(tmr); tmr=setTimeout(()=>{n=0;},2500); if(n>=7){ n=0; const on=(()=>{try{return localStorage.getItem('lecoin_dev')==='1';}catch(e){return false;}})(); try{ if(on) localStorage.removeItem('lecoin_dev'); else localStorage.setItem('lecoin_dev','1'); }catch(e){} toast(`${t('ttTitle')} ${on?'OFF':'ON'}`); if(typeof renderFinance==='function' && activeTab==='finance') renderFinance(); } }; } })();
       // 🆕 v3.6.0 — Click sul logo → schermata principale del ruolo (cassiere=Cassa, admin/manager=Dashboard analytics)
       const _hl=$('header-logo');
       if(_hl){ _hl.style.cursor='pointer'; _hl.title=t('home')||'Home'; _hl.onclick=()=>{ const home = profile.role==='cashier' ? 'cassa' : 'analytics'; activeTab=home; _saveActiveTab(home); if(analyticsState)analyticsState._loadKey=null; document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('active',_isNavActive(x.dataset.tab))); render(); }; }
@@ -4750,7 +4755,7 @@
       // 🆕 v3.6.6 — cattura i dati GREZZI (prima del filtro per periodo/filiale) per riusarli in buildReportData → niente doppio caricamento
       const _preloaded = { sales:sales, loads:loadsArr, shifts:shiftsArr, inventory:invAll, payables:payArr, customers:customersArr, transfers:transfersArr };
       sales = sales.filter(s=>visOk(s.branchId) && inP(s.createdAt));
-      loadsArr = loadsArr.filter(l=>visOk(l.branchId) && inP(l.createdAt));
+      loadsArr = loadsArr.filter(l=>visOk(l.branchId) && inP(l.createdAt) && !l.cancelled);
       invAll = invAll.filter(i=>visOk(i.branchId));
       shiftsArr = shiftsArr.filter(s=>visOk(s.branchId) && inP(s.openAt||s.openedAt||s.createdAt||0));
       analyticsState._sales = sales;
@@ -4884,6 +4889,7 @@
       // Movimenti di tesoreria espliciti
       (movements||[]).forEach(m=>{
         if(!inAsOf(m.createdAt)) return;
+        if(m.cancelled) return; // 🆕 v3.6.9 — movimenti annullati ignorati dal motore tesoreria
         const amt=m.amount||0;
         if(m.type==='dotation'){ hq-=amt; ensureB(m.branchId); branchesBal[m.branchId]+=amt; }
         else if(m.type==='consolidation'){ ensureB(m.branchId); branchesBal[m.branchId]-=amt; hq+=amt; }
@@ -4942,7 +4948,7 @@
         if(s.payMethod==='instapay') hq.instapay+=(s.total||0);
         else if(s.userId) ec(s.userId,s.userName).cashIn+=(s.total||0);
       });
-      (movements||[]).forEach(m=>{ if(!inAsOf(m.createdAt))return; const a=m.amount||0;
+      (movements||[]).forEach(m=>{ if(m.cancelled)return; if(!inAsOf(m.createdAt))return; const a=m.amount||0;
         if(m.type==='dotation'){ hq.dotOut+=a; eb(m.branchId); branches[m.branchId].dotIn+=a; }
         else if(m.type==='consolidation'){ hq.consolIn+=a; eb(m.branchId); branches[m.branchId].consolOut+=a; }
         else if(m.type==='liquidation'){ if(m.cashierId){ const c=ec(m.cashierId,m.cashierName); c.liquidated+=a; c.diffCum+=(m.diff||0); } eb(m.branchId); branches[m.branchId].liqIn+=a; }
@@ -5917,9 +5923,10 @@
       else if(m.type==='expense'){ label=t('trxTypeExpense'); desc=`${_opexCatLabel(m.category)} · ${_payLevelLabel(m)}`; color='var(--red)'; }
       else { label=esc(m.type); desc=''; color='var(--charcoal)'; }
       const diffBadge = (m.type==='liquidation' && m.diff) ? `<span style="font-size:9.5px;padding:2px 7px;border-radius:20px;margin-${lang==='ar'?'right':'left'}:6px;background:${m.diff<0?'rgba(192,72,72,0.12)':'rgba(61,115,85,0.12)'};color:${m.diff<0?'var(--red)':'var(--green)'};font-weight:700;">${m.diff<0?t('liqDiffShort'):t('liqDiffOver')} ${fmt(Math.abs(m.diff))}</span>` : '';
-      return `<div class="trx-card" data-id="${m.id}" style="background:#fff;border:1px solid var(--ivory-dark);border-radius:10px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;">
+      const cancelBadge = m.cancelled ? `<span style="font-size:9px;padding:2px 8px;border-radius:20px;margin-${lang==='ar'?'right':'left'}:6px;background:rgba(192,72,72,0.12);color:var(--red);font-weight:700;">${t('cancelledLabel')}</span>` : '';
+      return `<div class="trx-card" data-id="${m.id}" style="background:#fff;border:1px solid ${m.cancelled?'rgba(192,72,72,0.3)':'var(--ivory-dark)'};border-radius:10px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;${m.cancelled?'opacity:0.6;':''}">
         <div style="min-width:0;">
-          <div style="font-weight:700;font-size:12px;color:${color};display:flex;align-items:center;flex-wrap:wrap;">${label}${diffBadge}</div>
+          <div style="font-weight:700;font-size:12px;color:${color};display:flex;align-items:center;flex-wrap:wrap;">${label}${diffBadge}${cancelBadge}</div>
           <div style="font-size:10px;color:rgba(26,26,26,0.5);margin-top:2px;">${desc} · ${_capDateShort(m.createdAt)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
@@ -5943,6 +5950,49 @@
       return {items:[], approx:false};
     }
     // 🆕 v3.6.1 — Dettaglio movimento di cassa: apri (cliccabile) + gestisci (elimina). Per gli acquisti mostra la distinta prodotti.
+    // 🆕 v3.6.9 — ANNULLAMENTO TOTALE FATTURA D'ACQUISTO (Stadio 3)
+    // Storna TUTTO ciò che la fattura ha generato: merce fuori dal magazzino + soldi rimessi nella fonte + debito cancellato + audit
+    async function cancelPurchaseInvoice(movementId, recvBatchId){
+      if(!recvBatchId){ toast(t('errorGen'),true); return false; }
+      // 1. Conferma utente
+      if(!confirm(t('cancelInvoiceWarn'))) return false;
+      try{
+        // 2. Trova tutti i carichi (loads) di questa fattura
+        const loadsSnap = await getDocs(query(collection(db,'loads'), where('recvBatchId','==',recvBatchId)));
+        const loads=[]; loadsSnap.forEach(d=>loads.push({id:d.id,...d.data()}));
+        if(!loads.length){ toast(t('errorGen'),true); return false; }
+        const branchId = loads[0].branchId || currentBranchId;
+        // 3. Storno inventario: per ogni carico, sottrai la quantità dal magazzino
+        for(const ld of loads){
+          const invId = `${branchId}_${ld.productId}`;
+          const invSnap = await getDoc(doc(db,'inventory',invId));
+          const cur = invSnap.exists() ? invSnap.data() : {qty:0, threshold:20, lastCost:0};
+          const newQty = Math.max(0, (cur.qty||0) - (ld.qty||0));
+          await setDoc(doc(db,'inventory',invId), {branchId, productId:ld.productId, qty:newQty, threshold:cur.threshold||20, lastCost:cur.lastCost||0}, {merge:true});
+          if(inventory[ld.productId]) inventory[ld.productId].qty = newQty;
+          // Marca il carico come annullato (audit)
+          await updateDoc(doc(db,'loads',ld.id), {cancelled:true, cancelledAt:Date.now(), cancelledByUid:user.uid, cancelledByName:profile.name||user.email});
+        }
+        // 4. Storno finanziario: movimento di cassa OPPURE debito fornitore
+        // 4a. Cerca payable (acquisto a credito)
+        const paySnap = await getDocs(query(collection(db,'payables'), where('recvBatchId','==',recvBatchId)));
+        for(const d of paySnap.docs){
+          await updateDoc(doc(db,'payables',d.id), {status:'cancelled', cancelled:true, cancelledAt:Date.now(), cancelledByUid:user.uid, cancelledByName:profile.name||user.email});
+        }
+        // 4b. Marca il movimento di cassa come annullato (il motore tesoreria lo ignora se cancelled:true)
+        if(movementId){
+          await updateDoc(doc(db,'cashMovements',movementId), {cancelled:true, cancelledAt:Date.now(), cancelledByUid:user.uid, cancelledByName:profile.name||user.email});
+        }
+        // 5. Invalida cache e refresh
+        whLoadsCache=null; _recvCustodyCache=null;
+        toast(t('invoiceCancelled'));
+        closeSheet();
+        if(typeof loadAnalyticsData==='function') await loadAnalyticsData(true);
+        if(activeTab==='finance') renderFinance();
+        else if(activeTab==='analytics') renderAnalytics();
+        return true;
+      }catch(e){ console.error('[cancelInvoice]',e); toast(t('errorGen'),true); return false; }
+    }
     function openTrxDetail(id){
       const m=(analyticsState._cashMov||[]).find(x=>x.id===id);
       if(!m){ toast(t('errorGen'),true); return; }
@@ -5969,6 +6019,8 @@
       if(m.note) rows+=row(t('trxNote').replace(/\s*\(.*?\)\s*/,''), esc(m.note));
       rows+=row(t('capDate'), dt); // data/ora
       if(m.byName) rows+=row(t('trxBy'), esc(m.byName));
+      if(m.cancelled && m.cancelledByName) rows+=row(t('cancelledBy'), `<span style="color:var(--red);">${esc(m.cancelledByName)}</span>`);
+      if(m.cancelled && m.cancelledAt){ const cd=new Date(m.cancelledAt); const cts=`${_p2(cd.getHours())}:${_p2(cd.getMinutes())}`; rows+=row(t('cancelledAt'), `<span style="color:var(--red);">${_capDateShort(m.cancelledAt)} · ${(lang==='ar'&&typeof toArDigits==='function')?toArDigits(cts):cts}</span>`); }
       // Distinta prodotti per gli acquisti merce
       let itemsHtml='';
       if(m.type==='goods'){
@@ -5994,10 +6046,11 @@
         <div style="text-align:center;padding:6px 0 14px;"><span class="num" style="font-size:30px;font-weight:800;color:${color};">${fmt(m.amount)}</span> <span style="font-size:14px;color:rgba(26,26,26,0.5);font-weight:700;">${cur}</span></div>
         <div class="card" style="padding:4px 14px;">${rows}</div>
         ${itemsHtml}
-        <button class="btn-wide" id="td-del" style="margin-top:16px;padding:13px;background:#fff;color:var(--red);border:1.5px solid var(--red);border-radius:11px;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;">${ic('trash',16,2.2)} ${t('trxDelete')}</button>
+        ${m.cancelled ? `<div style="margin-top:14px;text-align:center;padding:13px;background:rgba(192,72,72,0.08);border:1.5px solid var(--red);border-radius:11px;font-weight:700;font-size:13px;color:var(--red);">${t('invoiceAlreadyCancelled')}</div>` : m.fromReceive && m.recvBatchId ? `<button class="btn-wide" id="td-cancel-inv" style="margin-top:16px;padding:13px;background:#fff;color:var(--red);border:1.5px solid var(--red);border-radius:11px;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;">${ic('trash',16,2.2)} ${t('cancelInvoice')}</button>` : `<button class="btn-wide" id="td-del" style="margin-top:16px;padding:13px;background:#fff;color:var(--red);border:1.5px solid var(--red);border-radius:11px;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;">${ic('trash',16,2.2)} ${t('trxDelete')}</button>`}
       </div></div>`;
       $('ov').onclick=closeSheet; $('cx').onclick=closeSheet;
-      $('td-del').onclick=async()=>{ if(await deleteCashMovement(m.id)) closeSheet(); };
+      if($('td-cancel-inv')) $('td-cancel-inv').onclick=()=>cancelPurchaseInvoice(m.id, m.recvBatchId);
+      if($('td-del')) $('td-del').onclick=async()=>{ if(await deleteCashMovement(m.id)) closeSheet(); };
     }
     function _renderTrxList(){
       const el=$('trx-list'); if(!el) return;
@@ -6808,6 +6861,7 @@
     }
     function openTreasuryTestTools(){
       if(!isProtectedAdmin(user.uid)){ toast(t('errorGen'),true); return; }
+      if(!_devToolsOn()){ toast(t('errorGen'),true); return; }
       const tile=(id,icon,col,title,hint)=>`<button id="${id}" style="width:100%;text-align:start;background:#fff;border:1px solid var(--ivory-dark);border-radius:12px;padding:13px;display:flex;align-items:center;gap:12px;font-family:inherit;cursor:pointer;margin-bottom:10px;">
         <div style="width:38px;height:38px;border-radius:10px;background:rgba(31,58,46,0.06);color:${col};display:flex;align-items:center;justify-content:center;flex:0 0 auto;">${ic(icon,18,2.2)}</div>
         <div style="min-width:0;"><div style="font-weight:800;font-size:13px;">${title}</div><div style="font-size:10.5px;color:rgba(26,26,26,0.55);margin-top:2px;">${hint}</div></div></button>`;
@@ -6849,7 +6903,7 @@
           ${tile('ca-pl','barChart','var(--gold)',t('plTitle'))}
           ${tile('ca-forecast','sparkle','var(--green)',t('fpTitle'))}
           ${tile('ca-rep','barChart','var(--forest)',t('repTreBtn'))}
-          ${isProtectedAdmin(user.uid)?`${grp(t('capActSystem'))}${tile('ca-tools','settings','rgba(26,26,26,0.6)',t('ttBtn'))}`:''}
+          ${isProtectedAdmin(user.uid) && _devToolsOn() ?`${grp(t('capActSystem'))}${tile('ca-tools','settings','rgba(26,26,26,0.6)',t('ttBtn'))}`:''}
         </div></div></div>`;
       $('cx').onclick=closeSheet;
       $('ca-dot').onclick=()=>openTreasuryOp('dotation');
@@ -10396,7 +10450,7 @@
         if(filters.operator && filters.operator!=='all') sales = sales.filter(s=>s.userId===filters.operator);
         if(filters.category && filters.category!=='all') sales = sales.filter(s=>(s.items||[]).some(it=>{ const p=products.find(x=>x.id===it.productId); return p && p.categoryId===filters.category; }));
       }
-      loadsArr=loadsArr.filter(l=>inRange(l.createdAt) && (profile.role==='admin'||visIds.includes(l.branchId)));
+      loadsArr=loadsArr.filter(l=>inRange(l.createdAt) && (profile.role==='admin'||visIds.includes(l.branchId)) && !l.cancelled);
       shiftsArr=shiftsArr.filter(s=>inRange(s.openAt) && (profile.role==='admin'||visIds.includes(s.branchId)));
       payablesArr=payablesArr.filter(p=>inRange(p.createdAt||0) && (profile.role==='admin'||visIds.includes(p.branchId)));
       invAll=invAll.filter(i=>profile.role==='admin'||visIds.includes(i.branchId));
